@@ -26,11 +26,12 @@ def GetBlockPosition(model, blockPrefix):
     blockPrefix : string
         String to look for
 
-    Attributes
-    ----------
-
     Notes
     -----
+    Includes code from stackoverflow
+    https://stackoverflow.com/questions/35572838/how-to-request-nodal-stress-output-in-abaqus-python-script
+    Author: agentp - https://stackoverflow.com/users/1004168/agentp
+
 
     References
     ----------
@@ -43,41 +44,6 @@ def GetBlockPosition(model, blockPrefix):
             return pos
         pos = pos + 1
     return -1
-
-
-def open_odb(odbPath):
-    """
-    A more sophisticated open odb function.
-
-    Parameters
-    ----------
-    odbPath : string
-        Path and filename of the database (without the '.odb' extension)
-
-    Attributes
-    ----------
-
-    Notes
-    -----
-
-    References
-    ----------
-
-    """
-
-    base, ext = os.path.splitext(odbPath)
-    odbPath = base + '.odb'
-    new_odbPath = None
-    if odbAccess.isUpgradeRequiredForOdb(upgradeRequiredOdbPath=odbPath):
-        print('odb %s needs upgrading' % (odbPath,))
-        path, file_name = os.path.split(odbPath)
-        file_name = base + "_upgraded.odb"
-        new_odbPath = os.path.join(path, file_name)
-        odbAccess.upgradeOdb(existingOdbPath=odbPath, upgradedOdbPath=new_odbPath)
-        odbPath = new_odbPath
-    odb = odbAccess.openOdb(path=odbPath, readOnly=True)
-    return odb
-
 
 
 def field_max(odb, result):
@@ -151,6 +117,7 @@ def history_max(odb_name, step_name):
 
     Notes
     -----
+    Incomplete: Work only for specific history output names, needs to be generalised.
 
     References
     ----------

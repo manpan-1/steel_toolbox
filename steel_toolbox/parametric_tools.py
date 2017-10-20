@@ -23,6 +23,11 @@ def divisors(n):
 
     Notes
     -----
+    Includes code from stackoverflow
+    https://stackoverflow.com/questions/171765/what-is-the-best-way-to-get-all-the-divisors-of-a-number
+    Author: Matthew Scharley - https://stackoverflow.com/users/15537/matthew-scharley
+
+
 
     """
     large_divisors = []
