@@ -1,6 +1,3 @@
-# code to be evaluated for max field output value
-# https://gist.github.com/crmccreary/1074551
-
 """
 Module containing tools for Abaqus cae
 """
