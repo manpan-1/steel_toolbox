@@ -11,7 +11,6 @@ from abaqusConstants import *
 
 
 
-# definition of a method to search for a keyword position
 def GetBlockPosition(model, blockPrefix):
     """
     Find a string and return the block number.
@@ -44,54 +43,6 @@ def GetBlockPosition(model, blockPrefix):
             return pos
         pos = pos + 1
     return -1
-
-
-def field_max(odb, result):
-    """
-    Look for the max value in a field output.
-
-    Scan a field output on an abaqus result database and return the maximum value
-
-    Parameters
-    ----------
-    odb : class
-        Abaqus model containing the field results
-    result : class
-        Field output result to search for max
-
-    Attributes
-    ----------
-
-    Notes
-    -----
-
-    References
-    ----------
-
-    """
-
-    result_field, result_invariant = result
-    _max = -1.0e20
-    for step in odb.steps.values():
-        print 'Processing Step:', step.name
-        for frame in step.frames:
-            if frame.frameValue > 0.0:
-                allFields = frame.fieldOutputs
-                if (allFields.has_key(result_field)):
-                    stressSet = allFields[result_field]
-                    for stressValue in stressSet.values:
-                        if result_invariant:
-                            if hasattr(stressValue, result_invariant.lower()):
-                                val = getattr(stressValue, result_invariant.lower())
-                            else:
-                                raise ValueError('Field value does not have invariant %s' % (result_invariant,))
-                        else:
-                            val = stressValue.data
-                        if (val > _max):
-                            _max = val
-                else:
-                    raise ValueError('Field output does not have field %s' % (results_field,))
-    return _max
 
 
 # Look for the max value in a history output
