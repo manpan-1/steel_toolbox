@@ -1095,12 +1095,12 @@ def bolt_grade2stress(bolt_grade):
     return f_ultimate, f_yield
 
 
-def shear_area(bolt_size, shear_threaded = None):
+def shear_area(bolt_size, shear_threaded=None):
     # Docstring
     """
     Shear area of a bolt.
 
-    Returns the srea to be used for the calculation of shear resistance of a bolt, either the gross cross-section of the
+    Returns the area to be used for the calculation of shear resistance of a bolt, either the gross cross-section of the
     bolt (circle area) or the reduced area of the threaded part of the bolt.
 
     Parameters
@@ -1136,8 +1136,8 @@ def shear_area(bolt_size, shear_threaded = None):
 def f_v_rd(
            bolt_size,
            bolt_grade,
-           shear_threaded = None,
-           gamma_M2 = None
+           shear_threaded=None,
+           gamma_m2=None
            ):
     # Docstring
     """
@@ -1152,7 +1152,7 @@ def f_v_rd(
     shear_threaded : bool, optional
         Designates if the shear plane is on the threaded portion or not.
         Default in False, which implies shearing of the non-threaded portion
-    gamma_M2 : float, optional
+    gamma_m2 : float, optional
         Safety factor.
         Default value is 1.25
 
@@ -1167,10 +1167,10 @@ def f_v_rd(
     if shear_threaded is None:
         shear_threaded = False
 
-    if gamma_M2 is None:
-        gamma_M2 = 1.25
+    if gamma_m2 is None:
+        gamma_m2 = 1.25
     else:
-        gamma_M2 = float(gamma_M2)
+        gamma_m2 = float(gamma_m2)
 
     # av coefficient
     if shear_threaded and bolt_grade == (4.6 or 8.6):
@@ -1185,10 +1185,7 @@ def f_v_rd(
     a_shear = shear_area(bolt_size, shear_threaded)
 
     # Shear resistance
-    ff_v_rd= a_v * f_ub * a_shear / gamma_M2
+    ff_v_rd = a_v * f_ub * a_shear / gamma_m2
 
     # Return value
     return ff_v_rd
-
-
-

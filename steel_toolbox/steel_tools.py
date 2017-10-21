@@ -189,15 +189,12 @@ def mean(numbers):
     return float(sum(numbers)) / max(len(numbers), 1)
 
 
-# Calculate xy of nodes for a given polygonal profile
-# Returns points for the entire profile (1st and 2nd returned values)
-# and points for a single sector (3rd and 4th returned values)
 def semi_closed_polygon(n_sides, radius, t, tg, rbend, nbend, l_lip):
     """
     Polygon sector nodes.
 
-    Calculates the node coordinates for a cross-section of the shape of
-    a lipped polygon sector.
+    Calculates the node coordinates for a a lipped polygon sector cross-section.
+
 
     Parameters
     ----------
@@ -216,14 +213,8 @@ def semi_closed_polygon(n_sides, radius, t, tg, rbend, nbend, l_lip):
     l_lip : int
         Length of the lips
 
-    Attributes
-    ----------
-
     Notes
     -----
-
-    References
-    ----------
 
     """
 
@@ -274,7 +265,7 @@ def semi_closed_polygon(n_sides, radius, t, tg, rbend, nbend, l_lip):
     x1 = x[0] + l1 * np.cos(v1)
     y1 = y[0] + l1 * np.sin(v1)
 
-    # First bend centre coords
+    # First bend centre coordinates
     xcs[0] = x1 + l2 * np.cos(v2)
     ycs[0] = y1 + l2 * np.sin(v2)
 
@@ -286,11 +277,11 @@ def semi_closed_polygon(n_sides, radius, t, tg, rbend, nbend, l_lip):
     x1 = x[-1] + l1 * np.cos(v1)
     y1 = y[-1] + l1 * np.sin(v1)
 
-    # Last bend centre coords
+    # Last bend centre coordinates
     xcs[1] = x1 + l2 * np.cos(v2)
     ycs[1] = y1 + l2 * np.sin(v2)
 
-    # First and last bend arc points coords
+    # First and last bend arc points coordinates
     xsarc = [[0 for j in range(nbend + 1)] for j in [0, 1]]
     ysarc = [[0 for j in range(nbend + 1)] for j in [0, 1]]
     for j in range(nbend + 1):
@@ -441,10 +432,10 @@ def closed_polygon(
     y_corners = r_circum * np.sin(phii)
 
     # Axial compression resistance , Npl
-    N_pl_Rd = n_sides * en.n_pl_rd(thickness, w_side, f_yield)
+    n_pl_rd = n_sides * en.n_pl_rd(thickness, w_side, f_yield)
 
     # Compression resistance of equivalent cylindrical shell
-    N_b_Rd_shell = 2 * pi * r_circle * thickness * en.sigma_x_rd(
+    n_b_rd_shell = 2 * pi * r_circle * thickness * en.sigma_x_rd(
         thickness,
         r_circle,
         column_length,
@@ -454,7 +445,7 @@ def closed_polygon(
     )
 
     # Return values
-    return r_circum, thickness, t_classification, tuple(x_corners), tuple(y_corners), N_pl_Rd, N_b_Rd_shell
+    return r_circum, thickness, t_classification, tuple(x_corners), tuple(y_corners), n_pl_rd, n_b_rd_shell
 
 
 def plastic_table(nominal=None):
@@ -469,14 +460,8 @@ def plastic_table(nominal=None):
     nominal : string [optional]
         Steel name. Default value, 'S355'
 
-    Attributes
-    ----------
-
     Notes
     -----
-
-    References
-    ----------
 
     """
     if nominal is None:
