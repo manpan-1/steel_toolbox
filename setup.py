@@ -32,7 +32,7 @@ setup(
     author="Panagiotis Manoleas",
     author_email='manpan@ltu.se',
     url='https://github.com/manpan-1/steel_toolbox',
-    packages=find_packages(include=['steel_toolbox']),
+    packages=find_packages(include=['steel_toolbox'], exclude=['docs', 'tests*']),
     entry_points={
         'console_scripts': [
             'steel_toolbox=steel_toolbox.cli:main'
@@ -42,7 +42,7 @@ setup(
     install_requires=requirements,
     license="MIT license",
     zip_safe=False,
-    keywords='steel_toolbox',
+    keywords='structural steel eurocode',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',

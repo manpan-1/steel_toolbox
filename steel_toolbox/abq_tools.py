@@ -23,7 +23,9 @@ def get_block_position(model, block_prefix):
     Notes
     -----
     Includes code from stackoverflow
+
     https://stackoverflow.com/questions/35572838/how-to-request-nodal-stress-output-in-abaqus-python-script
+
     Author : agentp - https://stackoverflow.com/users/1004168/agentp
 
     """
@@ -52,7 +54,9 @@ def field_max(odb, result):
     Notes
     -----
     Code from GithubGist
+
     https://gist.github.com/crmccreary/1074551
+
     Author : crmccreary - https://github.com/crmccreary/
 
     """
