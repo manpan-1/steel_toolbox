@@ -25,15 +25,6 @@ def cs_prop(nodes, elem):
     elem : list
         List of connecting elements
 
-    Attributes
-    ----------
-
-    Notes
-    -----
-
-    References
-    ----------
-
     """
 
     # Calculate cross sectional properties
@@ -149,12 +140,6 @@ def bolt2washer(m_bolt):
     m_bolt : float
         Bolt diameter
 
-    Attributes
-    ----------
-
-    Notes
-    -----
-
     References
     ----------
 
@@ -174,15 +159,6 @@ def mean(numbers):
     Parameters
     ----------
     numbers : list
-
-    Attributes
-    ----------
-
-    Notes
-    -----
-
-    References
-    ----------
 
     """
 
@@ -343,7 +319,8 @@ def closed_polygon(
     Geometry and properties of a polygonal cross-section.
 
     Calculate the cross-section geometrical characteristics (thickness, circumference, vertex coordinates) and
-    and resistances according to EC1-1 - EC-1-5 and EC1-6 (plated cross section and cylindrical shell respectively).
+    and resistances according to EC1-1, EC-1-5 and EC1-6 [1]_, [2]_, [3]_(plated cross section and cylindrical shell
+    respectively).
 
     Parameters
     ----------

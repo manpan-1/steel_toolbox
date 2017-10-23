@@ -60,7 +60,7 @@ def parametric_run(
     values is needed for each parameter.
     Each job is executed in a different automatically created subdirectory and a summary of the results is written in
     parent directory.
-    REFRESH-EXTEND DOCSTRING
+    REFRESH-EXTEND DOCSTRING, ADD NOTES
 
     Parameters
     ----------
