@@ -25,8 +25,14 @@ class CrossSection:
         y-axis on the centre of gravity but not necessarily principal.
     moi_z : float
 
+    Attributes
+    ----------
+
     Notes
     -----
+
+    References
+    ----------
 
     """
 
@@ -55,8 +61,8 @@ def n_pl_rd(
     """
     Plastic design resistance of a plate.
 
-    Calculates the resistance of a plate according to EN1993-1-1 [1]_ and
-    EN1993-1-5 [2]_. The plate is assumed simply supported.
+    Calculates the resistance of a plate according to EN1993-1-1 and
+    EN1993-1-5. The plate is assumed simply supported.
 
     Parameters
     ----------
@@ -82,7 +88,8 @@ def n_pl_rd(
 
     References
     ----------
-    .. [1] Eurocode 3: Design of steel structures - Part 1-1: General rules and rules for buildings. Brussels: CEN, 2005
+    .. [1] Eurocode 3: Design of steel structures - Part 1-1: General rules and rules for buildings.
+        Brussels: CEN, 2005.
     .. [2] Eurocode 3: Design of steel structures - Part 1-5: Plated structural elements. Brussels: CEN, 2005.
 
     """
@@ -127,7 +134,7 @@ def plate_class(
     """
     Plate classification.
 
-    Returns the class for a given plate, according to EN 1993-1-1 [1]_.
+    Returnes the class for a given plate, according to EN1993-1-1.
     Currently works for simply supported plates under pure compression.
 
     Parameters
@@ -182,7 +189,7 @@ def sigma_cr_plate(
     """
     Critical stress of a plate.
 
-    Calculates the critical stress for a simply supported plate according to EN 1993-1-5 [1]_.
+    Calculates the critical stress for a simply supported plate.
 
     Parameters
     ----------
@@ -244,7 +251,7 @@ def sigma_x_rd(
     Meridional design buckling stress.
 
     Calculates the meridional buckling stress for a cylindrical shell
-    according to EN 1993-1-6 [1]_.
+    according to EN1993-1-6 [1].
 
     Parameters
     ----------
@@ -343,7 +350,7 @@ def n_cr_shell(
 
     Calculates the critical load for a cylindrical shell under pure
     compression and assumes uniform stress distribution. Calculation
-    according to annex D of EN 1993-1-6 [1]_.
+    according to EN1993-1-6 [1], Annex D.
 
     Parameters
     ----------
@@ -387,7 +394,7 @@ def sigma_x_rcr(
 
     Calculates the critical load for a cylindrical shell under pure
     compression and assumes uniform stress distribution. Calculation
-    according to annex D EN 1993-1-6 [1].
+    according to EN1993-1-6 [1], Annex D.
 
     Parameters
     ----------
@@ -441,7 +448,7 @@ def fabclass_2_umax(fab_class=None):
     Max dimple displacement.
 
     Returns the maximum displacement for a dimple imperfection on a cylindrical shell. The values are taken from table
-    8.4 of EN 1993-1-6 [1]_ for a given fabrication quality class, A, B or C.
+    8.4 of EN1993-1-6[1] for a given fabrication quality class, A, B or C.
 
     Parameters
     ----------
@@ -546,7 +553,7 @@ def n_cr_tor(
     Torsional elastic critical load
 
     Calculates the torsional elastic critical load for a hinged column.
-    The input values are referring to the principal axes. For flexural
+    The input values are refering to the principal axes. For flexural
     buckling (Euler cases) use n_cr_flex. For the combined
     flexural-torsional modes use n_cr_flex_tor.
 
@@ -602,6 +609,12 @@ def n_cr_tor(
         :math:`r^2=(moi_y + moi_z)/A + x_0^2 + y_0^2`
 
         :math:`x_0, y_0`  : Shear centre coordinates on the principal coordinate system
+
+
+    References
+    ----------
+    ..[1]N. S. Trahair, Flexural-torsional buckling of structures, vol. 6. CRC Press, 1993.
+    ..[2]NS. Trahair, MA. Bradford, DA. Nethercot, and L. Gardner, The behaviour and design of steel structures to EC3, 4th edition. London; New York: Taylor & Francis, 2008.
 
     """
     # default values
@@ -659,7 +672,7 @@ def n_cr_flex_tor(
     Calculates the critical load for flexural-torsional buckling of a
     column with hinged ends. The returned value is the minimum of the
     the three flexural-torsional and the indepedent torsional mode, as
-    dictated in EN1993-1-1 6.3.1.4 [1]_. (for further details, see Notes).
+    dictated in EN1993-1-1 6.3.1.4 [1]. (for further details, see Notes).
 
     Parameters
     ----------
@@ -701,23 +714,22 @@ def n_cr_flex_tor(
     -----
     The flexural-torsional critical loads are calculated as a combination
     of the three independent overall buckling modes:
-    .. i)   flexural around the major axis,
-    .. ii)  flexural around the minor axis,
-    .. iii) Torsional buckling (around x-axis).
+    i)   flexural around the major axis,
+    ii)  flexural around the minor axis,
+    iii) Torsional buckling (around x-axis).
 
     First, the cs-properties are described on the principal axes. Then
     the three independent  modes are calculated. The combined
     flexural-torsional modes are calculated as the roots of a 3rd order
-    equation, as given in [2]_, [3]_. The minimum of the torsional and the
+    equation, as given in [1], [2]. The minimum of the torsional and the
     three combined modes is returned (the two independent flexural modes
     are not considered; for critical load of pure flexural mode use
     'n_cr_flex').
 
     References
     ----------
-    .. [1] Eurocode 3: Design of steel structures - Part 1-1: General rules and rules for buildings. Brussels: CEN, 2005
-    .. [2] N. S. Trahair, Flexural-torsional buckling of structures, vol. 6. CRC Press, 1993.
-    .. [3] N. S. Trahair, MA. Bradford, DA. Nethercot, and L. Gardner, The behaviour and design of steel structures to EC3, 4th edition. London; New York: Taylor & Francis, 2008.
+    ..[1]N. S. Trahair, Flexural-torsional buckling of structures, vol. 6. CRC Press, 1993.
+    ..[2]NS. Trahair, MA. Bradford, DA. Nethercot, and L. Gardner, The behaviour and design of steel structures to EC3, 4th edition. London; New York: Taylor & Francis, 2008.
 
     """
     # default values
@@ -833,7 +845,7 @@ def lmbda_flex(
     """
     Flexural slenderness.
 
-    Calculates the slenderness of a column under pure compression.
+    Calculates the slenderness of a columne under pure compression.
     Euler's critical load is used.
 
     Parameters
@@ -898,7 +910,7 @@ def imp_factor(b_curve):
     Imperfection factor.
 
     Returns the imperfection factor for a given buckling curve.
-    The values are taken from Table 6.1 of EN1993-1-1 [1]_.
+    The values are taken from Table 6.1 of EN1993-1-1 [1]
 
     Parameters
     ----------
@@ -938,7 +950,7 @@ def chi_flex(
     """
     Flexural buckling reduction factor.
 
-    Calculates the reduction factor, chi, according to paragraph 6.3.1.2 of EN 1993-1-1 [1]_.
+    Claculates the reduction factor, chi, according to EN1993-1-1 6.3.1.2
 
     Parameters
     ----------
@@ -1006,7 +1018,7 @@ def n_b_rd(
     Flexural buckling resistance.
 
     Verifies the resistance of a column against flexural buckling
-    according to paragraph 6.3.1.2 of EN 1993-1-1 [1]_.
+    according to EN1993-1-1 6.3.1.1.
 
     Parameters
     ----------
@@ -1083,12 +1095,12 @@ def bolt_grade2stress(bolt_grade):
     return f_ultimate, f_yield
 
 
-def shear_area(bolt_size, shear_threaded=None):
+def shear_area(bolt_size, shear_threaded = None):
     # Docstring
     """
     Shear area of a bolt.
 
-    Returns the area to be used for the calculation of shear resistance of a bolt, either the gross cross-section of the
+    Returns the srea to be used for the calculation of shear resistance of a bolt, either the gross cross-section of the
     bolt (circle area) or the reduced area of the threaded part of the bolt.
 
     Parameters
@@ -1124,8 +1136,8 @@ def shear_area(bolt_size, shear_threaded=None):
 def f_v_rd(
            bolt_size,
            bolt_grade,
-           shear_threaded=None,
-           gamma_m2=None
+           shear_threaded = None,
+           gamma_M2 = None
            ):
     # Docstring
     """
@@ -1140,7 +1152,7 @@ def f_v_rd(
     shear_threaded : bool, optional
         Designates if the shear plane is on the threaded portion or not.
         Default in False, which implies shearing of the non-threaded portion
-    gamma_m2 : float, optional
+    gamma_M2 : float, optional
         Safety factor.
         Default value is 1.25
 
@@ -1155,10 +1167,10 @@ def f_v_rd(
     if shear_threaded is None:
         shear_threaded = False
 
-    if gamma_m2 is None:
-        gamma_m2 = 1.25
+    if gamma_M2 is None:
+        gamma_M2 = 1.25
     else:
-        gamma_m2 = float(gamma_m2)
+        gamma_M2 = float(gamma_M2)
 
     # av coefficient
     if shear_threaded and bolt_grade == (4.6 or 8.6):
@@ -1173,7 +1185,10 @@ def f_v_rd(
     a_shear = shear_area(bolt_size, shear_threaded)
 
     # Shear resistance
-    ff_v_rd = a_v * f_ub * a_shear / gamma_m2
+    ff_v_rd= a_v * f_ub * a_shear / gamma_M2
 
     # Return value
     return ff_v_rd
+
+
+

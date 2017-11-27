@@ -23,11 +23,6 @@ def divisors(n):
 
     Notes
     -----
-    Includes code from stackoverflow
-    https://stackoverflow.com/questions/171765/what-is-the-best-way-to-get-all-the-divisors-of-a-number
-    Author: Matthew Scharley - https://stackoverflow.com/users/15537/matthew-scharley
-
-
 
     """
     large_divisors = []
@@ -60,7 +55,7 @@ def parametric_run(
     values is needed for each parameter.
     Each job is executed in a different automatically created subdirectory and a summary of the results is written in
     parent directory.
-    REFRESH-EXTEND DOCSTRING, ADD NOTES
+    REFRESH-EXTEND DOCSTRING
 
     Parameters
     ----------
@@ -76,7 +71,7 @@ def parametric_run(
         Default behaviour assumes that all of the arguments contained in func_args are participating in the construction
         of the parametric matrix and thus, it expects that func_args contains only lists (func_args = list of lists).
     mk_subdirs : bool, optional
-        Execute each job of the parametric project in a separate subdirectory.
+        Perform each execution in a separate subdirectory.
         Useful when the executed job generates files on the working directory.
         Default is False (run all jobs in the current directory)
     del_subdirs : bool, optional
@@ -133,7 +128,7 @@ def parametric_run(
 
         # Check if the directory exists
         if os.path.isdir("./" + job_id):
-            print("Job already exists: A directory with the same name" + job_id + " exists in the cwd")
+            print("Job already exists: A directory with the same name'" + job_id + "' exists in the cwd")
             continue
 
         if mk_subdirs is True:
@@ -164,6 +159,7 @@ def parametric_run(
 
             # Write each returned string to the file separated by newlines
             # job_return = str(job_return)
+            # TODO: create a standardised output that can be imported by the FEM results class in steel_tools.Column titles, input and output.
             out_file.write(job_id + ", " + return_string + "\n")
 
             # Add the result of the current job to the return list

@@ -12,7 +12,7 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 requirements = [
-    'Click>=6.0', 'numpy',
+    'Click>=6.0', 'numpy', 'stl', 'matplotlib',
     # TODO: put package requirements here
 ]
 
@@ -32,7 +32,7 @@ setup(
     author="Panagiotis Manoleas",
     author_email='manpan@ltu.se',
     url='https://github.com/manpan-1/steel_toolbox',
-    packages=find_packages(include=['steel_toolbox'], exclude=['docs', 'tests*']),
+    packages=find_packages(include=['steel_toolbox']),
     entry_points={
         'console_scripts': [
             'steel_toolbox=steel_toolbox.cli:main'
@@ -42,7 +42,7 @@ setup(
     install_requires=requirements,
     license="MIT license",
     zip_safe=False,
-    keywords='structural steel eurocode',
+    keywords='steel_toolbox',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',

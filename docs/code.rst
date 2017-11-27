@@ -16,12 +16,12 @@ abq_tools module: Tools for Abaqus cae
 .. automodule:: abq_tools
    :members:
 
-parametric_tools module: Manage parametric jobs
-===============================================
+parametric_tools: Manage parametric jobs
+========================================
 .. automodule:: parametric_tools
    :members:
 
-steel_tools module: Tools for steel design
-==========================================
+steel_tools: Tools for steel design
+===================================
 .. automodule:: steel_tools
    :members:

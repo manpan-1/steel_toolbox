@@ -1,12 +1,18 @@
+# code to be evaluated for max field output value
+# https://gist.github.com/crmccreary/1074551
+
 """
 Module containing tools for Abaqus cae
 """
 
+import os
 import odbAccess
 from abaqusConstants import *
 
 
-def get_block_position(model, block_prefix):
+
+# definition of a method to search for a keyword position
+def GetBlockPosition(model, blockPrefix):
     """
     Find a string and return the block number.
 
@@ -17,25 +23,61 @@ def get_block_position(model, block_prefix):
     ----------
     model : class
         Abaqus model to search for keyword
-    block_prefix : string
+    blockPrefix : string
         String to look for
+
+    Attributes
+    ----------
 
     Notes
     -----
-    Includes code from stackoverflow
 
-    https://stackoverflow.com/questions/35572838/how-to-request-nodal-stress-output-in-abaqus-python-script
-
-    Author : agentp - https://stackoverflow.com/users/1004168/agentp
+    References
+    ----------
 
     """
     import string
     pos = 0
     for block in model.keywordBlock.sieBlocks:
-        if string.lower(block[0:len(block_prefix)]) == string.lower(block_prefix):
+        if string.lower(block[0:len(blockPrefix)]) == string.lower(blockPrefix):
             return pos
         pos = pos + 1
     return -1
+
+
+def open_odb(odbPath):
+    """
+    A more sophisticated open odb function.
+
+    Parameters
+    ----------
+    odbPath : string
+        Path and filename of the database (without the '.odb' extension)
+
+    Attributes
+    ----------
+
+    Notes
+    -----
+
+    References
+    ----------
+
+    """
+
+    base, ext = os.path.splitext(odbPath)
+    odbPath = base + '.odb'
+    new_odbPath = None
+    if odbAccess.isUpgradeRequiredForOdb(upgradeRequiredOdbPath=odbPath):
+        print('odb %s needs upgrading' % (odbPath,))
+        path, file_name = os.path.split(odbPath)
+        file_name = base + "_upgraded.odb"
+        new_odbPath = os.path.join(path, file_name)
+        odbAccess.upgradeOdb(existingOdbPath=odbPath, upgradedOdbPath=new_odbPath)
+        odbPath = new_odbPath
+    odb = odbAccess.openOdb(path=odbPath, readOnly=True)
+    return odb
+
 
 
 def field_max(odb, result):
@@ -51,26 +93,27 @@ def field_max(odb, result):
     result : class
         Field output result to search for max
 
+    Attributes
+    ----------
+
     Notes
     -----
-    Code from GithubGist
 
-    https://gist.github.com/crmccreary/1074551
-
-    Author : crmccreary - https://github.com/crmccreary/
+    References
+    ----------
 
     """
 
     result_field, result_invariant = result
     _max = -1.0e20
     for step in odb.steps.values():
-        print 'Processing Step:', step.name
+        print('Processing Step:', step.name)
         for frame in step.frames:
             if frame.frameValue > 0.0:
-                all_fields = frame.fieldOutputs
-                if all_fields.has_key(result_field):
-                    stress_set = all_fields[result_field]
-                    for stressValue in stress_set.values:
+                allFields = frame.fieldOutputs
+                if (allFields.has_key(result_field)):
+                    stressSet = allFields[result_field]
+                    for stressValue in stressSet.values:
                         if result_invariant:
                             if hasattr(stressValue, result_invariant.lower()):
                                 val = getattr(stressValue, result_invariant.lower())
@@ -78,10 +121,10 @@ def field_max(odb, result):
                                 raise ValueError('Field value does not have invariant %s' % (result_invariant,))
                         else:
                             val = stressValue.data
-                        if val > _max:
+                        if (val > _max):
                             _max = val
                 else:
-                    raise ValueError('Field output does not have field %s' % (result_field,))
+                    raise ValueError('Field output does not have field %s' % (results_field,))
     return _max
 
 
@@ -108,26 +151,28 @@ def history_max(odb_name, step_name):
 
     Notes
     -----
-    Incomplete: Work only for specific history output names, needs to be generalised.
+
+    References
+    ----------
 
     """
 
-    the_odb = odbAccess.openOdb(path=odb_name + '.odb')
-    riks_step = the_odb.steps[step_name]
-    rp1key = riks_step.historyRegions.keys()[1]
-    ho1key = riks_step.historyRegions[rp1key].historyOutputs.keys()[0]
-    rp2key = riks_step.historyRegions.keys()[2]
-    ho2key = riks_step.historyRegions[rp2key].historyOutputs.keys()[0]
-    asskey = riks_step.historyRegions.keys()[0]
-    hoasse = riks_step.historyRegions[asskey].historyOutputs.keys()[-1]
-    load_hist = riks_step.historyRegions[rp1key].historyOutputs[ho1key].data
-    disp_hist = riks_step.historyRegions[rp2key].historyOutputs[ho2key].data
-    lpf_hist = riks_step.historyRegions[asskey].historyOutputs[hoasse].data
+    myOdb = odbAccess.openOdb(path=odb_name + '.odb')
+    RIKSstep = myOdb.steps[step_name]
+    rp1key = RIKSstep.historyRegions.keys()[1]
+    ho1key = RIKSstep.historyRegions[rp1key].historyOutputs.keys()[0]
+    rp2key = RIKSstep.historyRegions.keys()[2]
+    ho2key = RIKSstep.historyRegions[rp2key].historyOutputs.keys()[0]
+    asskey = RIKSstep.historyRegions.keys()[0]
+    hoasse = RIKSstep.historyRegions[asskey].historyOutputs.keys()[-1]
+    load_hist = RIKSstep.historyRegions[rp1key].historyOutputs[ho1key].data
+    disp_hist = RIKSstep.historyRegions[rp2key].historyOutputs[ho2key].data
+    lpf_hist = RIKSstep.historyRegions[asskey].historyOutputs[hoasse].data
     maxpos = load_hist.index(max(load_hist, key=lambda x: x[1]))
     load = load_hist[maxpos][1]
     disp = -disp_hist[maxpos][1]
     lpf = lpf_hist[maxpos][1]
-    odbAccess.closeOdb(the_odb)
+    odbAccess.closeOdb(myOdb)
     return lpf, load, disp
 
 
@@ -146,8 +191,15 @@ def fetch_eigenv(odb_name, step_name, n_eigen):
     n_eigen : int
         Number of eigenvalues to return
 
+    Attributes
+    ----------
+
     Notes
     -----
+
+    References
+    ----------
+
     """
 
     bckl_odb = odbAccess.openOdb(path=odb_name + '.odb')
@@ -159,7 +211,7 @@ def fetch_eigenv(odb_name, step_name, n_eigen):
     for J_eigenvalues in range(1, n_eigen + 1):
         current_eigen = float(bckl_step.frames[J_eigenvalues].description[-11:])
         eigenvalues = eigenvalues + (current_eigen,)
-        eigen_string = eigen_string + "%.3E " % current_eigen
+        eigen_string = eigen_string + "%.3E " % (current_eigen)
 
     # Close the odb
     odbAccess.closeOdb(bckl_odb)
