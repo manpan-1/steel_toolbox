@@ -26,7 +26,7 @@ test_requirements = [
 
 setup(
     name='steel_toolbox',
-    version='0.1.0',
+    version='0.2.0',
     description="A collection of classes and tools used on structural steel design.",
     long_description=readme + '\n\n' + history,
     author="Panagiotis Manoleas",
