@@ -52,10 +52,10 @@ class Member:
 # SIMPLY SUPPORTED PLATE
 
 def n_pl_rd(
-    thickness,
-    width,
-    f_yield,
-    psi=None
+        thickness,
+        width,
+        f_yield,
+        psi=None
 ):
     # Docstring
     """
@@ -126,9 +126,9 @@ def n_pl_rd(
 
 
 def plate_class(
-    thickness,
-    width,
-    f_yield
+        thickness,
+        width,
+        f_yield
 ):
     # Docstring
     """
@@ -181,9 +181,9 @@ def plate_class(
 
 
 def sigma_cr_plate(
-    thickness,
-    width,
-    psi=None
+        thickness,
+        width,
+        psi=None
 ):
     # Docstring
     """
@@ -239,12 +239,12 @@ def sigma_cr_plate(
 # CYLINDRICAL SHELLS
 
 def sigma_x_rd(
-    thickness,
-    radius,
-    length,
-    f_y_k,
-    fab_quality=None,
-    gamma_m1=None
+        thickness,
+        radius,
+        length,
+        f_y_k,
+        fab_quality=None,
+        gamma_m1=None
 ):
     # Docstring
     """
@@ -340,9 +340,9 @@ def sigma_x_rd(
 
 
 def n_cr_shell(
-    thickness,
-    radius,
-    length
+        thickness,
+        radius,
+        length
 ):
     # Docstring
     """
@@ -384,9 +384,9 @@ def n_cr_shell(
 
 
 def sigma_x_rcr(
-    thickness,
-    radius,
-    length
+        thickness,
+        radius,
+        length
 ):
     # Docstring
     """
@@ -484,10 +484,10 @@ def fabclass_2_umax(fab_class=None):
 
 # OVERALL BUCKLING
 def n_cr_flex(
-    length,
-    moi_y,
-    kapa_bc=None,
-    e_modulus=None
+        length,
+        moi_y,
+        kapa_bc=None,
+        e_modulus=None
 ):
     # Docstring
     """
@@ -537,16 +537,16 @@ def n_cr_flex(
 
 
 def n_cr_tor(
-    length,
-    area,
-    moi_y0,
-    moi_z0,
-    moi_torsion,
-    moi_warp,
-    y_0=None,
-    z_0=None,
-    e_modulus=None,
-    poisson=None,
+        length,
+        area,
+        moi_y0,
+        moi_z0,
+        moi_torsion,
+        moi_warp,
+        y_0=None,
+        z_0=None,
+        e_modulus=None,
+        poisson=None,
 ):
     # Docstring
     """
@@ -653,17 +653,17 @@ def n_cr_tor(
 
 
 def n_cr_flex_tor(
-    length,
-    area,
-    moi_y,
-    moi_z,
-    moi_yz,
-    moi_torsion,
-    moi_warp,
-    y_sc=None,
-    z_sc=None,
-    e_modulus=None,
-    poisson=None,
+        length,
+        area,
+        moi_y,
+        moi_z,
+        moi_yz,
+        moi_torsion,
+        moi_warp,
+        y_sc=None,
+        z_sc=None,
+        e_modulus=None,
+        poisson=None,
 ):
     # Docstring
     """
@@ -808,23 +808,30 @@ def n_cr_flex_tor(
     # Critical load
     # The following n_cr formulas are the roots of the 3rd order equation of the global critical load
 
-    n_cr_1 = bbbb/(3.*aaaa) - (2**(1./3)*(-bbbb**2 + 3*aaaa*cccc))/                     \
-        (3.*aaaa*(2*bbbb**3 - 9*aaaa*bbbb*cccc + 27*aaaa**2*dddd +                      \
-        (cf*sqrt(det_3)))**(1./3)) + (2*bbbb**3 - 9*aaaa*bbbb*cccc + 27*aaaa**2*dddd +  \
-        (cf*sqrt(det_3)))**(1./3)/(3.*2**(1./3)*aaaa)
+    n_cr_1 = bbbb / (3. * aaaa) - (2 ** (1. / 3) * (-bbbb ** 2 + 3 * aaaa * cccc)) / \
+                                  (3. * aaaa * (2 * bbbb ** 3 - 9 * aaaa * bbbb * cccc + 27 * aaaa ** 2 * dddd + \
+                                                (cf * sqrt(det_3))) ** (1. / 3)) + (
+                                                                                   2 * bbbb ** 3 - 9 * aaaa * bbbb * cccc + 27 * aaaa ** 2 * dddd + \
+                                                                                   (cf * sqrt(det_3))) ** (1. / 3) / (
+                                                                                   3. * 2 ** (1. / 3) * aaaa)
 
-    n_cr_2 = bbbb/(3.*aaaa) + ((1 + (0 + 1j)*sqrt(3))*(-bbbb**2 + 3*aaaa*cccc))/        \
-        (3.*2**(2./3)*aaaa*(2*bbbb**3 - 9*aaaa*bbbb*cccc + 27*aaaa**2*dddd +            \
-        (cf*sqrt(det_3)))**(1./3)) - ((1 - (0 + 1j)*sqrt(3))*                           \
-        (2*bbbb**3 - 9*aaaa*bbbb*cccc + 27*aaaa**2*dddd +                               \
-        (cf*sqrt(det_3)))**(1./3))/(6.*2**(1./3)*aaaa)
+    n_cr_2 = bbbb / (3. * aaaa) + ((1 + (0 + 1j) * sqrt(3)) * (-bbbb ** 2 + 3 * aaaa * cccc)) / \
+                                  (3. * 2 ** (2. / 3) * aaaa * (
+                                  2 * bbbb ** 3 - 9 * aaaa * bbbb * cccc + 27 * aaaa ** 2 * dddd + \
+                                  (cf * sqrt(det_3))) ** (1. / 3)) - ((1 - (0 + 1j) * sqrt(3)) * \
+                                                                      (
+                                                                      2 * bbbb ** 3 - 9 * aaaa * bbbb * cccc + 27 * aaaa ** 2 * dddd + \
+                                                                      (cf * sqrt(det_3))) ** (1. / 3)) / (
+                                                                     6. * 2 ** (1. / 3) * aaaa)
 
-    n_cr_3 = bbbb/(3.*aaaa) + ((1 - (0 + 1j)*sqrt(3))*(-bbbb**2 + 3*aaaa*cccc))/        \
-        (3.*2**(2./3)*aaaa*(2*bbbb**3 - 9*aaaa*bbbb*cccc + 27*aaaa**2*dddd +            \
-        (cf*sqrt(det_3)))**(1./3)) - ((1 + (0 + 1j)*sqrt(3))*                           \
-        (2*bbbb**3 - 9*aaaa*bbbb*cccc + 27*aaaa**2*dddd +                               \
-        (cf*sqrt(det_3)))**(1./3))/(6.*2**(1./3)*aaaa)
-
+    n_cr_3 = bbbb / (3. * aaaa) + ((1 - (0 + 1j) * sqrt(3)) * (-bbbb ** 2 + 3 * aaaa * cccc)) / \
+                                  (3. * 2 ** (2. / 3) * aaaa * (
+                                  2 * bbbb ** 3 - 9 * aaaa * bbbb * cccc + 27 * aaaa ** 2 * dddd + \
+                                  (cf * sqrt(det_3))) ** (1. / 3)) - ((1 + (0 + 1j) * sqrt(3)) * \
+                                                                      (
+                                                                      2 * bbbb ** 3 - 9 * aaaa * bbbb * cccc + 27 * aaaa ** 2 * dddd + \
+                                                                      (cf * sqrt(det_3))) ** (1. / 3)) / (
+                                                                     6. * 2 ** (1. / 3) * aaaa)
 
     # Lowest root is the critical load
     nn_cr_flex_tor = min(abs(n_cr_1), abs(n_cr_2), abs(n_cr_3), n_tor)
@@ -834,12 +841,12 @@ def n_cr_flex_tor(
 
 
 def lmbda_flex(
-    length,
-    area,
-    moi_y,
-    kapa_bc=None,
-    e_modulus=None,
-    f_yield=None
+        length,
+        area,
+        moi_y,
+        kapa_bc=None,
+        e_modulus=None,
+        f_yield=None
 ):
     # Docstring
     """
@@ -939,12 +946,12 @@ def imp_factor(b_curve):
 
 
 def chi_flex(
-    length,
-    area,
-    moi_y,
-    f_yield,
-    b_curve,
-    kapa_bc=None
+        length,
+        area,
+        moi_y,
+        f_yield,
+        b_curve,
+        kapa_bc=None
 ):
     # Docstring
     """
@@ -1005,13 +1012,13 @@ def chi_flex(
 
 
 def n_b_rd(
-    length,
-    area,
-    moi_y,
-    f_yield,
-    b_curve,
-    kapa_bc=None,
-    gamma_m1=None
+        length,
+        area,
+        moi_y,
+        f_yield,
+        b_curve,
+        kapa_bc=None,
+        gamma_m1=None
 ):
     # Docstring
     """
@@ -1095,7 +1102,7 @@ def bolt_grade2stress(bolt_grade):
     return f_ultimate, f_yield
 
 
-def shear_area(bolt_size, shear_threaded = None):
+def shear_area(bolt_size, shear_threaded=None):
     # Docstring
     """
     Shear area of a bolt.
@@ -1134,17 +1141,19 @@ def shear_area(bolt_size, shear_threaded = None):
 
 
 def f_v_rd(
-           bolt_size,
-           bolt_grade,
-           shear_threaded = None,
-           gamma_M2 = None
-           ):
+        bolt_size,
+        bolt_grade,
+        shear_threaded=None,
+        gamma_M2=None
+):
     # Docstring
     """
     Bolt's shear resistance.
 
     Calculates the shear resistance of single bolt for one shear plane as given in table 3.4 of EC3-1-8.
 
+    Parameters
+    ----------
     bolt_size : float
         Diameter of the non-threaded part (nominal bolt size e.g. M16 = 16)
     bolt_grade : float
@@ -1185,10 +1194,51 @@ def f_v_rd(
     a_shear = shear_area(bolt_size, shear_threaded)
 
     # Shear resistance
-    ff_v_rd= a_v * f_ub * a_shear / gamma_M2
+    ff_v_rd = a_v * f_ub * a_shear / gamma_M2
 
     # Return value
     return ff_v_rd
 
 
+def bolt_min_dist(d_0):
+    """
+    Minimum bolt spacing.
 
+    :param d_0:
+    :return:
+    """
+    e_1 = 1.2 * d_0
+    e_2 = 1.2 * d_0
+    e_3 = 1.5 * d_0
+    p_1 = 2.2 * d_0
+    p_2 = 2.4 * d_0
+
+    return (e_1, e_2, e_3, p_1, p_2)
+
+
+def f_b_rd(bolt_size, bolt_grade, thickness, steel_grade, f_yield, distances, d_0):
+    """
+    Connection bearing capacity.
+
+    Calculates the bearing capacity of a single bolt on a plate. The distances to the plate edges/other bolts are
+    described
+    :param bolt_size:
+    :param bolt_grade:
+    :param thickness:
+    :param steel_grade:
+    :param f_yield:
+    :param distances:
+    :param d_0:
+    :return:
+    """
+    pass
+
+
+def f_weld_perp():
+    f_w_1 = (sqrt(2) / 2) * a_weld * l_weld * f_ult / (b_w * gamma_m2)
+    f_w_2 = 0.9 * f_ult * a_weld * l_weld * sqrt(2) / gamma_m2
+    pass
+
+
+def f_weld_paral():
+    pass

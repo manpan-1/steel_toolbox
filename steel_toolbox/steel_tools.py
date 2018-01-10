@@ -20,6 +20,7 @@ class Geometry:
     length : float
         Member's length.
     """
+
     def __init__(self, cs_sketch, length):
         self.cs_sketch = cs_sketch
         self.length = length
@@ -240,13 +241,14 @@ class Material:
         By default, no plasticity is considered.
 
     """
+
     def __init__(self, e_modulus, poisson, f_yield, plasticity=None):
         self.e_modulus = e_modulus
         self.poisson = poisson
         self.f_yield = f_yield
         self.plasticity = plasticity
 
-#TODO change default value to S235
+    # TODO change default value to S235
     def plastic_table(nominal=None):
         """
         Plasticity tables.
@@ -308,7 +310,7 @@ class Material:
             f_yield = 235.
         else:
             f_yield = float(nominal_strength.replace('S', ''))
-            plasticity = cls.plastic_table(nominal = nominal_strength)
+            plasticity = cls.plastic_table(nominal=nominal_strength)
         return cls(210000., 0.3, f_yield, plasticity=plasticity)
 
 
@@ -340,6 +342,7 @@ class StructProps:
     n_b_rd_shell : float, optional
         Shell buckling resistance
     """
+
     def __init__(self,
                  t_classification=None,
                  p_classification=None,
@@ -348,7 +351,6 @@ class StructProps:
                  n_pl_rd=None,
                  n_b_rd_shell=None
                  ):
-
         self.t_classification = t_classification
         self.p_classification = p_classification
         self.lmbda_y = lmbda_y
@@ -393,25 +395,23 @@ class PolygonalColumn(Part):
                  material=None,
                  struct_props=None,
                  bc_loads=None):
-
         super().__init__(
-                 geometry,
-                 cs_props,
-                 material,
-                 struct_props,
-                 bc_loads)
+            geometry,
+            cs_props,
+            material,
+            struct_props,
+            bc_loads)
 
     @classmethod
     def from_geometry(
-        cls,
-        n_sides,
-        r_circle,
-        thickness,
-        length,
-        f_yield,
-        fab_class
+            cls,
+            n_sides,
+            r_circle,
+            thickness,
+            length,
+            f_yield,
+            fab_class
     ):
-
         geometry, cs_props, material, struct_props = PolygonalColumn.calc_properties(
             n_sides,
             r_circle,
@@ -425,13 +425,13 @@ class PolygonalColumn(Part):
 
     @classmethod
     def from_slenderness_and_thickness(
-        cls,
-        n_sides,
-        p_classification,
-        thickness,
-        length,
-        f_yield,
-        fab_class
+            cls,
+            n_sides,
+            p_classification,
+            thickness,
+            length,
+            f_yield,
+            fab_class
     ):
         """Calculate radius of a polygon cs for given sides, thickness, plate slenderness and yield strength"""
 
@@ -455,13 +455,13 @@ class PolygonalColumn(Part):
 
     @classmethod
     def from_slenderness_and_radius(
-        cls,
-        n_sides,
-        r_circle,
-        p_classification,
-        length,
-        f_yield,
-        fab_class
+            cls,
+            n_sides,
+            r_circle,
+            p_classification,
+            length,
+            f_yield,
+            fab_class
     ):
         """Calculate the thickness of a polygon cs for given sides, equivalent circle radius, plate slenderness and yield
         strength"""
@@ -486,12 +486,12 @@ class PolygonalColumn(Part):
 
     @staticmethod
     def calc_properties(
-        n_sides,
-        r_circle,
-        thickness,
-        length,
-        f_yield,
-        fab_class):
+            n_sides,
+            r_circle,
+            thickness,
+            length,
+            f_yield,
+            fab_class):
         # Create material
         material = Material(210000, 0.3, f_yield)
         epsilon = sqrt(235. / f_yield)
