@@ -13,6 +13,7 @@ from scipy import odr
 from stl import mesh
 import os
 from steel_toolbox.steel_tools import eccentricity
+from steel_toolbox import analytic_geometry as ag
 import pickle
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -25,8 +26,11 @@ class Scan3D:
     Class of 3D objects. Can be imported from an .stl file of a .txt file of list of node coordinates.
     """
 
-    def __init__(self, scanned_data):
+    def __init__(self, scanned_data=None, grouped_data=None, centre=None, size=None):
         self.scanned_data = scanned_data
+        self.grouped_data = grouped_data
+        self.centre = centre
+        self.size = size
 
     @classmethod
     def from_stl_file(cls, fh, del_original=None):
@@ -55,7 +59,7 @@ class Scan3D:
 
         scanned_data = mesh.Mesh.from_file(fh)
 
-        return cls(scanned_data)
+        return cls(scanned_data=scanned_data)
 
     @classmethod
     def from_coordinates_file(cls, fh):
@@ -78,7 +82,7 @@ class Scan3D:
             for i, l in enumerate(f):
                 scanned_data[i] = l.split()
 
-        return cls(scanned_data)
+        return cls(scanned_data=scanned_data)
 
     @classmethod
     def from_pickle(cls, fh):
@@ -89,7 +93,7 @@ class Scan3D:
 
         """
         with open(fh, 'rb') as f:
-            return cls(np.array(pickle.load(f)))
+            return cls(scanned_data=np.array(pickle.load(f)))
 
     @staticmethod
     def repair_stl_file_structure(fh, del_original=None):
@@ -128,74 +132,231 @@ class Scan3D:
         if del_original:
             os.remove(old_file)
 
+    def sort_on_axis(self, axis=None):
+        """
+        Sort scanned data.
+
+        The scanned points are sorted for a given axis.
+
+        :param axis:
+        :return:
+        """
+        if axis is None:
+            axis = 0
+
+        self.scanned_data = self.scanned_data[np.argsort(self.scanned_data[:, axis])]
+
+    def quantize(self, axis=None, tolerance=None):
+        """
+        Group the scanned data.
+
+        The points with difference on a given axis smaller than the tolerance are grouped together and stored in a list
+        in the attribute `grouped_data`.
+
+        :param axis:
+        :param tolerance:
+        :return:
+        """
+        if axis is None:
+            axis = 0
+
+        if tolerance is None:
+            tolerance = 1e-4
+
+        self.sort_on_axis(axis=axis)
+        self.grouped_data = [np.r_[[self.scanned_data[0]]]]
+        for point in self.scanned_data:
+            if point[axis] - self.grouped_data[-1][0][axis] < tolerance:
+                self.grouped_data[-1] = np.vstack([self.grouped_data[-1], point])
+            else:
+                self.grouped_data.append(np.r_[[point]])
+
+    def centre_size(self):
+        """
+        Get the centre and the range of the data points.
+
+        Used in combination with the plotting methods to define the bounding box.
+        """
+
+        # Check if plane data exists.
+        if not isinstance(self.plane_coeff, np.ndarray):
+            print('Wrong or missing plane coefficients')
+            return NotImplemented
+
+        # Bounding box of the points.
+        x_min = min([i[0] for i in self.scanned_data])
+        x_max = max([i[0] for i in self.scanned_data])
+        y_min = min([i[1] for i in self.scanned_data])
+        y_max = max([i[1] for i in self.scanned_data])
+        z_min = min([i[2] for i in self.scanned_data])
+        z_max = max([i[2] for i in self.scanned_data])
+        x_range = abs(x_max - x_min)
+        y_range = abs(y_max - y_min)
+        z_range = abs(z_max - z_min)
+        x_mid = (x_max + x_min) / 2
+        y_mid = (y_max + y_min) / 2
+        z_mid = (z_min + z_max) / 2
+
+        self.centre = np.r_[x_mid, y_mid, z_mid]
+        self.size = np.r_[x_range, y_range, z_range]
+
     def plot_surf(self):
         """
         Method plotting the model as a 3D surface.
         """
         # Create the x, y, z numpy arrays
-        X = [i[0] for i in self.scanned_data]
-        Y = [i[1] for i in self.scanned_data]
-        Z = [i[2] for i in self.scanned_data]
+        x = [i[0] for i in self.scanned_data]
+        y = [i[1] for i in self.scanned_data]
+        z = [i[2] for i in self.scanned_data]
 
         # Create a figure.
         fig = plt.figure()
         ax = fig.gca(projection='3d')
 
         # Plot the data
-        ax.plot_trisurf(X, Y, Z)
+        ax.plot_trisurf(x, y, z)
 
 
-class PolygColumn:
+class PolygonalColumnSpecimen:
     """
     A column specimen of polygonal cross-section.
 
     Used for the scanned polygonal specimens.
     """
 
-    def __init__(self, sides=None, edges=None, centre_line=None):
+    def __init__(self, sides=None, edges=None, centre_line=None, thickness=None):
+        if sides is None:
+            sides = []
+
+        if edges is None:
+            edges = []
+
         self.sides = sides
         self.edges = edges
         self.centre_line = centre_line
-        if self.sides is None:
-            self.sides = []
+        self.thickness = thickness
 
-        if self.edges is None:
-            self.edges = []
-
-    def add_centre_line(self, points):
+    def add_centre_line(self, point1, point2):
         """
         Calculate the centre axis of the column from 2 given points.
+
         :return:
         """
-        self.centre_line = Line3D.from_2_points(points[0], points[1])
+        self.centre_line = ag.Line3D.from_2_points(point1, point2)
 
     def add_single_side_from_pickle(self, filename):
+        """
+        Create a FlatFace instance as one side af the polygon column.
+
+        The FlatFace instance is created from a pickle file of scanned data points.
+
+        :param filename:
+        :return:
+        """
         self.sides.append(FlatFace.from_pickle(filename))
 
-    def add_all_sides(self, n_sides, prefix, planar_fit=None, intersect_sides=None):
+    def add_all_sides(self, n_sides, prefix, planar_fit=None, offset_to_midline=False):
+        """
+        Add multiple sides.
+
+        Multiple FlatFace instances are created as sides of the polygonal column. A series of files containing scanned
+        data points must be given. The files should be on the same path and have a filename structure as:
+        `path/basenameXX.pkl`, where XX is an id number in ascending order starting from 01.
+        Only the `path/filename` is given as input to this method.
+
+        :param n_sides:
+        :param prefix:
+        :param planar_fit:
+        :return:
+        """
         if planar_fit is None:
             planar_fit = False
-        if intersect_sides is None:
-            intersect_sides = False
 
         self.sides = [FlatFace.from_pickle(prefix + '{:02d}.pkl'.format(x)) for x in range(1, n_sides + 1)]
 
         if planar_fit:
             [x.planar_fit(lay_on_xy=True) for x in self.sides]
+        if offset_to_midline:
+            offset = self.thickness / 2
+            [x.offset_plane(offset, offset_points=True) for x in self.sides]
 
-        if planar_fit and intersect_sides:
-            self.edges = [self.sides[x] & self.sides[x + 1] for x in range(-len(self.sides), 0)]
+    def add_single_edge_from_pickle(self, filename):
+        """
+        Create a RoundEdge instance as one edges af the polygon column.
+
+        The RoundEdge instance is created from a pickle file of scanned data points.
+
+        :param filename:
+        :return:
+        """
+        self.edges.append(RoundedEdge.from_pickle(filename))
+
+    def add_all_edges(self, n_sides, prefix, ref_lines=False):
+        """
+        Add multiple edges.
+
+        Multiple RoundEdge instances are created as edges of the polygonal column. A series of files containing scanned
+        data points must be given. The files should be on the same path and have a filename structure as:
+        `path/basenameXX.pkl`, where XX is an id number in ascending order starting from 01.
+        Only the `path/filename` is given as input to this method.
+
+        After adding the sequential edges, if ref_lines=True, the reference lines are calculated as the intersections
+        of sequential sides.
+
+        :param n_sides:
+        :param prefix:
+        :param ref_lines:
+        :return:
+        """
+        self.edges = [RoundedEdge.from_pickle(prefix + '{:02d}.pkl'.format(x)) for x in range(1, n_sides + 1)]
+
+        if ref_lines:
+            for x in range(-len(self.sides), 0):
+                self.edges[x].add_ref_line(self.sides[x] & self.sides[x + 1])
+
+    def find_real_edges(self, offset_to_midline=False):
+        """
+        Find edge points on the scanned rounded edge.
+
+        A series of points is returned which represent the real edge of the polygonal column. Each point is calculated
+        as  the intersection of a circle and a line at different heights of the column, where the circle is best fit to
+        the rounded edge scanned points and the line passing through the reference edge (see `add_all_edges`
+        documentation) and the polygon's centre line.
+
+        :return:
+        """
+        if offset_to_midline:
+            offset = -self.thickness / 2
+        else:
+            offset = 0
+
+        if isinstance(self.centre_line, ag.Line3D) and isinstance(self.edges, list):
+            for x in self.edges:
+                x.fit_circles(axis=2, offset=offset)
+                x.intersect_data(self.centre_line)
+        else:
+            NotImplemented
 
     def plot_all(self):
+        """
+        Plot all data.
+
+        :return:
+        """
         max_z = max([x.scanned_data[:, 2].max() for x in self.sides])
         min_z = min([x.scanned_data[:, 2].min() for x in self.sides])
         fig1 = plt.figure()
         Axes3D(fig1)
         for i in range(-len(self.sides), 0):
             self.sides[i].plot_xy_bounded(reduced=0.003, fig=fig1)
-            self.edges[i].plot_line(fig=fig1, ends=[min_z, max_z])
+            self.edges[i].ref_line.plot_line(fig=fig1, ends=[min_z, max_z])
 
     def print_report(self):
+        """
+        Print a report for the polygon column.
+
+        :return:
+        """
         max_z = max([x.scanned_data[:, 2].max() for x in self.sides])
         min_z = min([x.scanned_data[:, 2].min() for x in self.sides])
         for i in range(len(self.sides)):
@@ -203,11 +364,11 @@ class PolygColumn:
             print('')
             print('Edge {} (sides {}-{})\n    Direction : {}\n    Through points : \n{}\n{}'.format(
                 i + 1,
-                i + 2,
                 i + 1,
-                self.edges[0].parallel,
-                self.edges[0].xy_for_z(min_z),
-                self.edges[0].xy_for_z(max_z))
+                i + 2,
+                self.edges[i].ref_line.parallel,
+                self.edges[i].ref_line.xy_for_z(min_z),
+                self.edges[i].ref_line.xy_for_z(max_z))
             )
             print('')
 
@@ -220,7 +381,6 @@ class FlatFace(Scan3D):
     """
 
     def __init__(self, scanned_data=None, plane_coeff=None):
-        self.scanned_data = scanned_data
         self.plane_coeff = plane_coeff
 
         super().__init__(scanned_data)
@@ -239,7 +399,7 @@ class FlatFace(Scan3D):
             parallel = np.cross(np.r_[self.plane_coeff[0], self.plane_coeff[1], self.plane_coeff[2]],
                                 np.r_[other.plane_coeff[0], other.plane_coeff[1], self.plane_coeff[2]])
             # Normalise the direction vector.
-            parallel = unit_vector(parallel)
+            parallel = ag.unit_vector(parallel)
 
             # Calculate the intersection of the line with the xy plane
             a_1, a_2 = self.plane_coeff[0], other.plane_coeff[0]
@@ -253,7 +413,7 @@ class FlatFace(Scan3D):
             z_0 = 0
             p_0 = np.array([x_0, y_0, z_0])
 
-            return Line3D.from_point_and_parallel(p_0, parallel)
+            return ag.Line3D.from_point_and_parallel(p_0, parallel)
         else:
             return NotImplemented
 
@@ -262,7 +422,11 @@ class FlatFace(Scan3D):
         """
         Fit a plane to 3d points.
 
-        A regular least squares fit is performed (no error assumed in the given z-values).
+        A regular least squares fit is performed. If the argument lay_on_xy is given True, a regular least squares
+        fitting is performed and the result is used to rotate the points so that they come parallel to the xy-plane.
+        Then, a second least squares fit is performed and the result is rotated back to the initial position. This
+        procedure helps overcome the problem of vertical planes.
+
         :return:
         """
         if lay_on_xy is None:
@@ -271,34 +435,34 @@ class FlatFace(Scan3D):
         # Iterative fitting
         if lay_on_xy:
             # Perform least squares fit on the points "as is"
-            beta1 = lstsq(self.scanned_data)
+            beta1 = ag.lstsq(self.scanned_data)
 
             # Z-axis unit vector.
             v1 = np.r_[0, 0, 1]
 
             # The normalised norm vector of the plane (which will be aligned to z axis)
-            v2 = unit_vector(beta1[0:3])
+            v2 = ag.unit_vector(beta1[0:3])
 
             # Find the angle between the zz axis and the plane's normal vector, v2
-            rot_ang = angle_between(v1, v2)
+            rot_ang = ag.angle_between(v1, v2)
 
             # Find the rotation axis.
-            rot_ax = unit_vector(np.r_[v2[1], -v2[0], 0])
+            rot_ax = ag.unit_vector(np.r_[v2[1], -v2[0], 0])
 
             # Transform the points so that v2 is aligned to z.
-            transformed = rotate_points(self.scanned_data, rot_ang, rot_ax)
+            transformed = ag.rotate_points(self.scanned_data, rot_ang, rot_ax)
 
             # Perform least squares.
-            beta2 = lstsq(transformed)
+            beta2 = ag.lstsq(transformed)
 
             # Return the fitted plane to the original position of the points.
-            beta2[:3] = rotate_points([beta2[:3]], -rot_ang, rot_ax)
+            beta2[:3] = ag.rotate_points([beta2[:3]], -rot_ang, rot_ax)
 
             # Store the fitted plane in the instance.
             self.plane_coeff = beta2
 
         else:
-            self.plane_coeff = lstsq(self.scanned_data)
+            self.plane_coeff = ag.lstsq(self.scanned_data)
 
     def quadratic_fit(self, scanned_data):
         """
@@ -374,34 +538,25 @@ class FlatFace(Scan3D):
         lsc_out = lsc_odr.run()
 
         self.plane_coeff = lsc_out.beta / lsc_out.beta[3]
-        # # Coefficients of the explicit plane formula 'z = A*x + B*y + C'. It stands alpha=beta/-c, where alfa=[A, B, C]
-        # alpha = lsc_out.beta / (-lsc_out.beta[2])
-        # self.plane_coeff = np.r_[alpha[0], alpha[1], alpha[3]]
 
-    def centre_size(self):
-        """Get the centre and the range of the data points."""
+    def offset_plane(self, offset, offset_points=None):
+        """
+        Offset the plane and (optionally) the scanned data points.
 
-        # Check if plane data exists.
-        if not isinstance(self.plane_coeff, np.ndarray):
-            print('Wrong or missing plane coefficients')
-            return NotImplemented
+        Useful for translating translating the scanned surface to the mid line.
 
-        # Bounding box of the points.
-        x_min = min([i[0] for i in self.scanned_data])
-        x_max = max([i[0] for i in self.scanned_data])
-        y_min = min([i[1] for i in self.scanned_data])
-        y_max = max([i[1] for i in self.scanned_data])
-        z_min = min([i[2] for i in self.scanned_data])
-        z_max = max([i[2] for i in self.scanned_data])
-        x_range = abs(x_max - x_min)
-        y_range = abs(y_max - y_min)
-        z_range = abs(z_max - z_min)
-        x_mid = (x_max + x_min) / 2
-        y_mid = (y_max + y_min) / 2
-        z_mid = (z_min + z_max) / 2
+        :param offset:
+        :param offset_points:
+        :return:
+        """
+        if offset_points is None:
+            offset_points = False
 
-        self.centre = np.r_[x_mid, y_mid, z_mid]
-        self.size = np.r_[x_range, y_range, z_range]
+        self.plane_coeff = np.append(self.plane_coeff[:3], self.plane_coeff[3]-offset)
+
+        if offset_points:
+            point_list = [p + self.plane_coeff[:3] * offset for p in self.scanned_data]
+            self.scanned_data = np.array(point_list)
 
     def z_return(self, x, y):
         """
@@ -424,7 +579,7 @@ class FlatFace(Scan3D):
         x : float or numpy.ndarray
         y : float or numpy.ndarray
         """
-        return Line2D.from_line_coeff(
+        return ag.Line2D.from_line_coeff(
             self.plane_coeff[0],
             self.plane_coeff[1],
             self.plane_coeff[2] * z + self.plane_coeff[3]
@@ -499,265 +654,81 @@ class FlatFace(Scan3D):
         # Return the figure handle.
         return fig
 
-    def plot_z_bounded(self, z_bounds=None, fig=None, reduced=None):
+
+class RoundedEdge(Scan3D):
+    """
+    A scanned rounded edge.
+    """
+    def __init__(self, scanned_data=None, ref_line=None, edge_points=None, circles=None):
+        self.ref_line = ref_line
+        self.edge_points = edge_points
+        self.circles = circles
+
+        super().__init__(scanned_data)
+
+    def intersect_data(self, other):
         """
-        Plot the plane between given upper and lower z limits.
+        Intersect scanned points with a surface between the reference line and a given line.
 
-        Intersecting the plane with a xy plane (for a given z) results in a line in two dimensions.
+        This function is used to calculate the real edge based on the scanned rounded corner. Circles are fitted on the
+        scanned points on different positions. Then the circles are intersected with the line passing through the
+        reference line of the edge and another given line (e.g. the centre of the column). A list of points is
+        generated which represent the real edge of rounded corner.
 
-        :param fig:
-        :param reduced:
+        :param other:
         :return:
         """
-
-        def quadratic(a, b, c):
-            a = int(input("Enter the coefficients of a: "))
-            b = int(input("Enter the coefficients of b: "))
-            c = int(input("Enter the coefficients of c: "))
-
-            d = b ** 2 - 4 * a * c  # discriminant
-
-            if d < 0:
-                x1 = None
-                x2 = None
-            elif d == 0:
-                x1 = (-b + np.sqrt(b ** 2 - 4 * a * c)) / 2 * a
-                x2 = x1
-            else:
-                x1 = (-b + np.sqrt((b ** 2) - (4 * (a * c)))) / (2 * a)
-                x2 = (-b - np.sqrt((b ** 2) - (4 * (a * c)))) / (2 * a)
-
-            return [x1, x2]
-
-        # Get a figure to plot on
-        if fig is None:
-            fig = plt.figure()
-            ax = Axes3D(fig)
+        if isinstance(other, ag.Line3D):
+            self.edge_points = []
+            for x in self.circles:
+                z_current = x.points[0][0]
+                ref_line_point = self.ref_line.xy_for_z(z_current)
+                other_line_point = other.xy_for_z(z_current)
+                intersection_line = ag.Line2D.from_2_points(ref_line_point[:2], other_line_point[:2])
+                line_circle_intersection = x.intersect_with_line(intersection_line)
+                if np.linalg.norm(line_circle_intersection[0]) > np.linalg.norm(line_circle_intersection[1]):
+                    outer = line_circle_intersection[0]
+                else:
+                    outer = line_circle_intersection[1]
+                self.edge_points.append(outer)
         else:
-            ax = fig.get_axes()[0]
+            NotImplemented
 
-        if z_bounds is None:
-            z_bounds = [-1, 1]
+    def add_ref_line(self, ref_line):
+        """
+        Add a reference line for the edge.
 
-        # Make a randomly selected subset of points acc. to the input arg 'reduced=x'.
-        if isinstance(reduced, float) and (0 < reduced < 1):
-            i = np.random.choice(
-                len(self.scanned_data[:, 0]),
-                size=round(len(self.scanned_data[:, 0]) * reduced),
-                replace=False
-            )
+        Useful when the rounded edge lies between flat faces and the theoretical edge is at their intersection.
+
+        :param ref_line:
+        :return:
+        """
+        if isinstance(ref_line, ag.Line3D):
+            self.ref_line = ref_line
         else:
-            i = range(0, len(self.scanned_data[:, 0]))
+            print("ref_line must be Line3D")
+            NotImplemented
 
-        # Aaverage and range of the points.
-        self.centre_size()
-
-        # Calculate the radius of the circle as equal to the distance between the z limits.
-        radious = abs(z_bounds[0] - z_bounds[1])
-
-        # Line on 2d, intersection of the plane to the z=z_mid, where z_mid is the average z of the ziven points.
-        l_z_mid = self.xy_return(self.centre[2])
-
-        # Intersect the plane with a horizontal circle with centre at the average of the given points.
-        # The coefficients of the 2nd order polynomial that solves the intersection of a circle to a line.
-        a = self.plane_coeff[0]
-        b = self.plane_coeff[1]
-        c = self.plane_coeff[2]
-        x_c = self.centre[0]
-        y_c = self.centre[1]
-
-        A = 1 + (a / b) ** 2
-        B = 2 * (x_c - a * y_c / b - a * c / b)
-        C = x_c ** 2 + y_c ** 2 - radius ** 2 + 2 * y_c * c / b + (c / b) ** 2
-
-        roots = quadratic(A, B, C)
-
-
-class Line3D:
-    """A line in three dimensions"""
-
-    def __init__(self, point=None, parallel=None):
-        self.point = point
-        self.parallel = parallel
-
-    @classmethod
-    def from_point_and_parallel(cls, point, parallel):
+    def fit_circles(self, axis=None, offset=None):
         """
-        TODO: add check if the input data is numpy array and convert them to.
-        :param point:
-        :param parallel:
+        Fit a series of circles along the length of the rounded edge.
+
+        The scanned data are first grouped together based on their z-coordinate ant then a horizontal circle is fitted
+        for each group of points.
+
         :return:
         """
-        # Normalise the given parallel vector
-        parallel = unit_vector(np.r_[parallel])
-        return cls(point=np.r_[point], parallel=parallel)
+        if axis is None:
+            axis = 0
 
-    @classmethod
-    def from_2_points(cls, point1, point2):
-        """
-        TODO: add check if the input is np arrays and convert them to
-        :param point1:
-        :param point2:
-        :return:
-        """
-        point1 = np.r_[point1]
-        point2 = np.r_[point2]
-        # Calculate and normalise the direction vector.
-        parallel = unit_vector(point1 - point2)
-        return cls(point=point1, parallel=parallel)
+        if offset is None:
+            offset = 0
 
-    @classmethod
-    def from_pickle(cls, fh):
-        """
-        Import line from pickle.
-
-        Used to import center lines for the polygonal specimens, as exported from blender.
-
-        Parameters
-        ----------
-        fh: string
-            Path and filename of the pickle file.
-        """
-        with open(fh, 'rb') as f:
-            points = pickle.load(f)
-
-        return cls.from_2_points(np.r_[points[0]], np.r_[points[1]])
-
-    def xy_for_z(self, z_1):
-        """Return x, y for a given z"""
-        t = (z_1 - self.point[2]) / self.parallel[2]
-        x_1 = self.parallel[0] * t + self.point[0]
-        y_1 = self.parallel[1] * t + self.point[1]
-        return np.r_[x_1, y_1, z_1]
-
-    def plot_line(self, ends=None, fig=None):
-        """
-        Line segment plotter.
-
-        Plot a segment of the line between two values of the parameter `t` in x=x0 + a*t
-
-        ends : array like, optional
-            The end values for the parametric form of the line segment to be plotted (array like with 2 values). Default
-            is [-1, 1]
-        fig : Object of class matplotlib.figure.Figure, optional
-            The figure window to be used for plotting. By default, a new window is created.
-        :return:
-        """
-        if ends is None:
-            ends = np.array([-1, 1])
-
-        x = self.point[0] + self.parallel[0] * np.r_[ends]
-        y = self.point[1] + self.parallel[1] * np.r_[ends]
-        z = self.point[2] + self.parallel[2] * np.r_[ends]
-
-        if fig is None:
-            fig = plt.figure()
-            ax = fig.gca(projection='3d')
-        else:
-            ax = fig.get_axes()[0]
-        ax.plot(x, y, z, label='parametric curve')
-        ax.legend()
-
-        plt.show()
-
-
-class Line2D:
-    """A line in three dimensions"""
-
-    def __init__(self, point=None, parallel=None, line_coeff=None):
-        self.point = point
-        self.parallel = parallel
-        self.line_coeff = line_coeff
-
-    @classmethod
-    def from_point_and_parallel(cls, point, parallel):
-        """
-        TODO: add check if the input data is numpy array and convert them to.
-        :param point:
-        :param parallel:
-        :return:
-        """
-        # Normalise the given parallel vector
-        parallel = unit_vector(np.r_[parallel])
-        line_coeff = np.r_[-parallel[1], parallel[0], parallel[1] * point[0] - parallel[0] * point[1]]
-        return cls(point=np.r_[point], parallel=parallel, line_coeff=line_coeff)
-
-    @classmethod
-    def from_2_points(cls, point1, point2):
-        """
-        TODO: add check if the input is np arrays and convert them to
-        :param point1:
-        :param point2:
-        :return:
-        """
-        point1 = np.r_[point1]
-        point2 = np.r_[point2]
-        # Calculate and normalise the direction vector.
-        parallel = unit_vector(point1 - point2)
-        return cls.from_point_and_parallel(point1, parallel)
-
-    @classmethod
-    def from_line_coeff(cls, A, B, C):
-        parallel = np.r_[B, -A]
-        point = [0, -(C / B)]
-        line = cls.from_point_and_parallel(point, parallel)
-        line.line_coeff = np.r_[A, B, C]
-        return line
-
-    @classmethod
-    def from_pickle(cls, fh):
-        """
-        Import line from pickle.
-
-        Used to import center lines for the polygonal specimens, as exported from blender.
-
-        Parameters
-        ----------
-        fh: string
-            Path and filename of the pickle file.
-        """
-        with open(fh, 'rb') as f:
-            points = pickle.load(f)
-            return cls.from_2_points(np.r_[points[0]], np.r_[points[1]])
-
-    def x_for_y(self, y):
-        """Return x a given y"""
-
-        return (-self.line_coeff[1] * y - self.line_coeff[2]) / self.line_coeff[0]
-
-    def y_for_x(self, x):
-        """Return y a given x"""
-
-        return (-self.line_coeff[0] * x - self.line_coeff[2]) / self.line_coeff[1]
-
-    def plot_line(self, ends=None, fig=None):
-        """
-        Line segment plotter.
-
-        Plot a segment of the line between two values of the parameter `t` in x=x0 + a*t
-
-        ends : array like, optional
-            The end values for the parametric form of the line segment to be plotted (array like with 2 values). Default
-            is [-1, 1]
-        fig : Object of class matplotlib.figure.Figure, optional
-            The figure window to be used for plotting. By default, a new window is created.
-        :return:
-        """
-        if ends is None:
-            ends = np.array([-1, 1])
-
-        x = self.point[0] + self.parallel[0] * np.r_[ends]
-        y = self.point[1] + self.parallel[1] * np.r_[ends]
-
-        if fig is None:
-            fig = plt.figure()
-            ax = fig.gca()
-        else:
-            ax = fig.get_axes()[0]
-        ax.plot(x, y, label='parametric curve')
-        ax.legend()
-
-        plt.show()
+        self.quantize(axis=axis)
+        self.circles = []
+        for x in self.grouped_data:
+            self.circles.append(ag.Circle2D.from_fitting(x))
+            self.circles[-1].radius = self.circles[-1].radius + offset
 
 
 class Experiment:
@@ -835,57 +806,22 @@ class Experiment:
         return cls(header, data)
 
 
-def lstsq(points):
-    # best-fit linear plane
-    a = np.c_[points[:, 0], points[:, 1], np.ones(points.shape[0])]
-    c, _, _, _ = scipy.linalg.lstsq(a, points[:, 2])  # coefficients
-
-    # The coefficients are returned as an array beta=[a, b, c, d] from the implicit form 'a*x + b*y + c*z + d = 0'.
-    # The vector is normalized so that [a, b, c] has a unit length and `d` is positive.
-    return np.r_[c[0], c[1], -1, c[2]] / (np.linalg.norm([c[0], c[1], -1]) * np.sign(c[2]))
-
-
-def rotate_points(points, rot_ang, rot_ax):
-    """
-    Rotate points for given angle around axis.
-
-    :param points:
-    :param rot_ang:
-    :param rot_ax:
-    :return:
-    """
-    # Rotation matrix
-    sint = np.sin(rot_ang)
-    cost = np.cos(rot_ang)
-    ux, uy, uz = rot_ax
-
-    rot_mtx = np.r_[
-        [[cost + ux ** 2 * (1 - cost), ux * uy * (1 - cost) - uz * sint, ux * uz * (1 - cost) + uy * sint],
-         [uy * ux * (1 - cost) + uz * sint, cost + uy ** 2 * (1 - cost), uy * uz * (1 - cost) - ux * sint],
-         [uz * ux * (1 - cost) - uy * sint, uz * uy * (1 - cost) + ux * sint, cost + uz ** 2 * (1 - cost)]]
-    ]
-
-    # Transform the points.
-    return np.array([np.dot(p, rot_mtx) for p in points])
-
-
-def unit_vector(vector):
-    """ Returns the unit vector of the vector.  """
-    return vector / np.linalg.norm(vector)
-
-
-def angle_between(v1, v2):
-    """ Returns the angle in radians between vectors 'v1' and 'v2'"""
-
-    v1_u = unit_vector(v1)
-    v2_u = unit_vector(v2)
-    return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
-
-
 def main():
-    # Import the first two sides.
-    sp1 = PolygColumn()
-    sp1.add_all_sides(16, '../../sp1/sp1_side', planar_fit=True, intersect_sides=True)
+    # Create a polygon column instance.
+    sp1 = PolygonalColumnSpecimen(thickness=3)
+
+    # Add a center line for the specimen.
+    sp1.add_centre_line([0, 0, 0], [0, 0, 1])
+
+    # Add all sides and edges.
+    # they consist of FlatFace and RoundedEdge instances.
+    sp1.add_all_sides(16, '../../sp1/sp1_side_', planar_fit=True, offset_to_midline=True)
+    sp1.add_all_edges(16, '../../sp1/sp1_edge_', ref_lines=True)
+
+    # Find a series of points for each edge based on the scanned surface.
+    sp1.find_real_edges(offset_to_midline=True)
+
+    #
     sp1.plot_all()
     sp1.print_report()
 
