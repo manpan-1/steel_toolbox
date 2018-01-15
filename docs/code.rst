@@ -25,3 +25,13 @@ steel_tools: Tools for steel design
 ===================================
 .. automodule:: steel_tools
    :members:
+
+lab_tools: Tools related to laboratory work
+===========================================
+.. automodule:: lab_tools
+   :members:
+
+analytic_geometry: Basic Cartesian geometry
+===========================================
+.. automodule:: analytic_geometry
+   :members:

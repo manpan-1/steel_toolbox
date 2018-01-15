@@ -5,6 +5,85 @@ from scipy import odr
 import pickle
 from matplotlib import pyplot as plt
 
+class Plane3D:
+    def __init__(self, plane_coeff=None):
+        self.plane_coeff = plane_coeff
+
+    def __and__(self, other):
+        """
+        Object division returns the intersection line.
+
+        :param other:
+        :return:
+        """
+
+        if isinstance(other, Plane3D):
+            # Calculate the parallel vector of the intersection line as the dot product of the vectors normal to the
+            # planes.
+            parallel = np.cross(np.r_[self.plane_coeff[0], self.plane_coeff[1], self.plane_coeff[2]],
+                                np.r_[other.plane_coeff[0], other.plane_coeff[1], self.plane_coeff[2]])
+            # Normalise the direction vector.
+            parallel = unit_vector(parallel)
+
+            # Calculate the intersection of the line with the xy plane
+            a_1, a_2 = self.plane_coeff[0], other.plane_coeff[0]
+            b_1, b_2 = self.plane_coeff[1], other.plane_coeff[1]
+            c_1, c_2 = self.plane_coeff[2], other.plane_coeff[2]
+            d_1, d_2 = self.plane_coeff[3], other.plane_coeff[3]
+            # y_0 = (c_2 * a_1 - c_1 * a_2) / (b_1 * a_2 - b_2 * a_1)
+            # x_0 = (-b_1 / a_1) / y_0 - c_1/a_1
+            y_0 = (d_2 * a_1 - d_1 * a_2) / (b_1 * a_2 - b_2 * a_1)
+            x_0 = (b_1 * y_0 + d_1) / (-a_1)
+            z_0 = 0
+            p_0 = np.array([x_0, y_0, z_0])
+
+            return Line3D.from_point_and_parallel(p_0, parallel)
+        else:
+            return NotImplemented
+
+    def offset_plane(self, offset):
+        """
+        Offset the plane and (optionally) the scanned data points.
+
+        Useful for translating translating the scanned surface to the mid line.
+
+        :param offset:
+        :param offset_points:
+        :return:
+        """
+        self.plane_coeff = np.append(self.plane_coeff[:3], self.plane_coeff[3]-offset)
+
+    def z_return(self, x, y):
+        """
+        Calculate z of a plane for given x, y.
+
+        x : float or numpy.ndarray
+        y : float or numpy.ndarray
+        """
+        if not isinstance(self.plane_coeff, np.ndarray):
+            print('Wrong od missing plane coefficients')
+            return NotImplemented
+        alpha = (-self.plane_coeff / self.plane_coeff[2])
+        z = alpha[0] * x + alpha[1] * y + alpha[3]
+        return z
+
+    def xy_return(self, z):
+        """
+        Intersect with a z=z0 plane.
+
+        x : float or numpy.ndarray
+        y : float or numpy.ndarray
+        """
+        return Line2D.from_line_coeff(
+            self.plane_coeff[0],
+            self.plane_coeff[1],
+            self.plane_coeff[2] * z + self.plane_coeff[3]
+        )
+
+    @classmethod
+    def from_fitting(cls, points, lay_on_xy=False):
+        plane_coeff = planar_fit(points, lay_on_xy=lay_on_xy)
+        return cls(plane_coeff=plane_coeff)
 
 class Circle2D:
     """A circle in two dimensions."""
@@ -271,6 +350,132 @@ def lstsq(points):
     # The coefficients are returned as an array beta=[a, b, c, d] from the implicit form 'a*x + b*y + c*z + d = 0'.
     # The vector is normalized so that [a, b, c] has a unit length and `d` is positive.
     return np.r_[c[0], c[1], -1, c[2]] / (np.linalg.norm([c[0], c[1], -1]) * np.sign(c[2]))
+
+
+def planar_fit(points, lay_on_xy=False):
+
+    """
+    Fit a plane to 3d points.
+
+    A regular least squares fit is performed. If the argument lay_on_xy is given True, a regular least squares
+    fitting is performed and the result is used to rotate the points so that they come parallel to the xy-plane.
+    Then, a second least squares fit is performed and the result is rotated back to the initial position. This
+    procedure helps overcome the problem of vertical planes.
+
+    :return:
+    """
+    if lay_on_xy is None:
+        lay_on_xy = False
+
+    # Iterative fitting
+    if lay_on_xy:
+        # Perform least squares fit on the points "as is"
+        beta1 = lstsq(points)
+
+        # Z-axis unit vector.
+        v1 = np.r_[0, 0, 1]
+
+        # The normalised norm vector of the plane (which will be aligned to z axis)
+        v2 = unit_vector(beta1[0:3])
+
+        # Find the angle between the zz axis and the plane's normal vector, v2
+        rot_ang = angle_between(v1, v2)
+
+        # Find the rotation axis.
+        rot_ax = unit_vector(np.r_[v2[1], -v2[0], 0])
+
+        # Transform the points so that v2 is aligned to z.
+        transformed = rotate_points(points, rot_ang, rot_ax)
+
+        # Perform least squares.
+        beta2 = lstsq(transformed)
+
+        # Return the fitted plane to the original position of the points.
+        beta2[:3] = rotate_points([beta2[:3]], -rot_ang, rot_ax)
+
+        # Store the fitted plane in the instance.
+        return beta2
+
+    else:
+        # Perform a least squares fitting directly on the original position and return the coefficients.
+        return lstsq(points)
+
+
+def quadratic_fit(points):
+    """
+    Fit a quadratic surface to 3d points.
+
+    A regular least squares fit is performed (no error assumed in the given z-values).
+    :param scanned_data:
+    :return:
+    """
+    # best-fit quadratic curve
+    a = np.c_[
+        np.ones(points.shape[0]),
+        points[:, :2],
+        np.prod(points[:, :2], axis=1),
+        points[:, :2] ** 2]
+
+    beta, _, _, _ = scipy.linalg.lstsq(a, points[:, 2])
+    return beta
+
+
+def odr_planar_fit(points, rand_3_estimate=False):
+    """
+    Fit a plane to 3d points.
+
+    Orthogonal distance regression is performed using the odrpack.
+
+    :return:
+    """
+
+    def f_3(beta, xyz):
+        """ implicit definition of the plane"""
+        return beta[0] * xyz[0] + beta[1] * xyz[1] + beta[2] * xyz[2] + beta[3]
+
+    # # Coordinates of the 2D points
+    x = points[:, 0]
+    y = points[:, 1]
+    z = points[:, 2]
+    # x = np.r_[9, 35, -13, 10, 23, 0]
+    # y = np.r_[34, 10, 6, -14, 27, -10]
+    # z = np.r_[100, 101, 101, 100, 101, 101]
+
+    if rand_3_estimate:
+        # initial guess for parameters
+        # select 3 random points
+        i = np.random.choice(len(x), size=3, replace=False)
+
+        # Form the 3 points
+        r_point_1 = np.r_[x[i[0]], y[i[0]], z[i[0]]]
+        r_point_2 = np.r_[x[i[1]], y[i[1]], z[i[1]]]
+        r_point_3 = np.r_[x[i[2]], y[i[2]], z[i[2]]]
+
+        # Two vectors on the plane
+        v_1 = r_point_1 - r_point_2
+        v_2 = r_point_1 - r_point_3
+
+        # normal to the 3-point-plane
+        u_1 = np.cross(v_1, v_2)
+
+        # Construct the first estimation, beta0
+        d_0 = u_1[0] * r_point_1[0] + u_1[1] * r_point_1[1] + u_1[2] * r_point_1[2]
+        beta0 = np.r_[u_1[0], u_1[1], u_1[2], d_0]
+    else:
+        beta0 = planar_fit()
+
+    # Create the data object for the odr. The equation is given in the implicit form 'a*x + b*y + c*z + d = 0' and
+    # beta=[a, b, c, d] (beta is the vector to be fitted). The positional argument y=1 means that the dimensionality
+    # of the fitting is 1.
+    lsc_data = odr.Data(np.row_stack([x, y, z]), y=1)
+    # Create the odr model
+    lsc_model = odr.Model(f_3, implicit=True)
+    # Create the odr object based on the data, the model and the first estimation vector.
+    lsc_odr = odr.ODR(lsc_data, lsc_model, beta0)
+    # run the regression.
+    lsc_out = lsc_odr.run()
+
+    return lsc_out.beta / lsc_out.beta[3]
 
 
 def fit_circle(points):

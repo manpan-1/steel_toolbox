@@ -8,8 +8,6 @@ acquired with CATMAN.
 import numpy as np
 import csv
 import codecs
-import scipy.linalg
-from scipy import odr
 from stl import mesh
 import os
 from steel_toolbox.steel_tools import eccentricity
@@ -177,12 +175,6 @@ class Scan3D:
 
         Used in combination with the plotting methods to define the bounding box.
         """
-
-        # Check if plane data exists.
-        if not isinstance(self.plane_coeff, np.ndarray):
-            print('Wrong or missing plane coefficients')
-            return NotImplemented
-
         # Bounding box of the points.
         x_min = min([i[0] for i in self.scanned_data])
         x_max = max([i[0] for i in self.scanned_data])
@@ -255,7 +247,7 @@ class PolygonalColumnSpecimen:
         """
         self.sides.append(FlatFace.from_pickle(filename))
 
-    def add_all_sides(self, n_sides, prefix, planar_fit=None, offset_to_midline=False):
+    def add_all_sides(self, n_sides, prefix, fit_planes=None, offset_to_midline=False):
         """
         Add multiple sides.
 
@@ -266,19 +258,19 @@ class PolygonalColumnSpecimen:
 
         :param n_sides:
         :param prefix:
-        :param planar_fit:
+        :param fit_planes:
         :return:
         """
-        if planar_fit is None:
-            planar_fit = False
+        if fit_planes is None:
+            fit_planes = False
 
         self.sides = [FlatFace.from_pickle(prefix + '{:02d}.pkl'.format(x)) for x in range(1, n_sides + 1)]
 
-        if planar_fit:
-            [x.planar_fit(lay_on_xy=True) for x in self.sides]
+        if fit_planes:
+            [x.fit_plane() for x in self.sides]
         if offset_to_midline:
             offset = self.thickness / 2
-            [x.offset_plane(offset, offset_points=True) for x in self.sides]
+            [x.offset_face(offset, offset_points=True) for x in self.sides]
 
     def add_single_edge_from_pickle(self, filename):
         """
@@ -312,7 +304,7 @@ class PolygonalColumnSpecimen:
 
         if ref_lines:
             for x in range(-len(self.sides), 0):
-                self.edges[x].add_ref_line(self.sides[x] & self.sides[x + 1])
+                self.edges[x].add_ref_line(self.sides[x].ref_plane & self.sides[x + 1].ref_plane)
 
     def find_real_edges(self, offset_to_midline=False):
         """
@@ -360,7 +352,7 @@ class PolygonalColumnSpecimen:
         max_z = max([x.scanned_data[:, 2].max() for x in self.sides])
         min_z = min([x.scanned_data[:, 2].min() for x in self.sides])
         for i in range(len(self.sides)):
-            print('Side {} is : {}'.format(i + 1, self.sides[i].plane_coeff))
+            print('Side {} is : {}'.format(i + 1, self.sides[i].ref_plane.plane_coeff))
             print('')
             print('Edge {} (sides {}-{})\n    Direction : {}\n    Through points : \n{}\n{}'.format(
                 i + 1,
@@ -380,166 +372,15 @@ class FlatFace(Scan3D):
     Used for the individual faces of the polygonal specimens.
     """
 
-    def __init__(self, scanned_data=None, plane_coeff=None):
-        self.plane_coeff = plane_coeff
+    def __init__(self, scanned_data=None, ref_plane=None):
+        self.ref_plane = ref_plane
 
         super().__init__(scanned_data)
 
-    def __and__(self, other):
-        """
-        Object division returns the intersection line.
+    def fit_plane(self):
+        self.ref_plane = ag.Plane3D.from_fitting(self.scanned_data, lay_on_xy=True)
 
-        :param other:
-        :return:
-        """
-
-        if isinstance(other, FlatFace):
-            # Calculate the parallel vector of the intersection line as the dot product of the vectors normal to the
-            # planes.
-            parallel = np.cross(np.r_[self.plane_coeff[0], self.plane_coeff[1], self.plane_coeff[2]],
-                                np.r_[other.plane_coeff[0], other.plane_coeff[1], self.plane_coeff[2]])
-            # Normalise the direction vector.
-            parallel = ag.unit_vector(parallel)
-
-            # Calculate the intersection of the line with the xy plane
-            a_1, a_2 = self.plane_coeff[0], other.plane_coeff[0]
-            b_1, b_2 = self.plane_coeff[1], other.plane_coeff[1]
-            c_1, c_2 = self.plane_coeff[2], other.plane_coeff[2]
-            d_1, d_2 = self.plane_coeff[3], other.plane_coeff[3]
-            # y_0 = (c_2 * a_1 - c_1 * a_2) / (b_1 * a_2 - b_2 * a_1)
-            # x_0 = (-b_1 / a_1) / y_0 - c_1/a_1
-            y_0 = (d_2 * a_1 - d_1 * a_2) / (b_1 * a_2 - b_2 * a_1)
-            x_0 = (b_1 * y_0 + d_1) / (-a_1)
-            z_0 = 0
-            p_0 = np.array([x_0, y_0, z_0])
-
-            return ag.Line3D.from_point_and_parallel(p_0, parallel)
-        else:
-            return NotImplemented
-
-    def planar_fit(self, lay_on_xy=False):
-
-        """
-        Fit a plane to 3d points.
-
-        A regular least squares fit is performed. If the argument lay_on_xy is given True, a regular least squares
-        fitting is performed and the result is used to rotate the points so that they come parallel to the xy-plane.
-        Then, a second least squares fit is performed and the result is rotated back to the initial position. This
-        procedure helps overcome the problem of vertical planes.
-
-        :return:
-        """
-        if lay_on_xy is None:
-            lay_on_xy = False
-
-        # Iterative fitting
-        if lay_on_xy:
-            # Perform least squares fit on the points "as is"
-            beta1 = ag.lstsq(self.scanned_data)
-
-            # Z-axis unit vector.
-            v1 = np.r_[0, 0, 1]
-
-            # The normalised norm vector of the plane (which will be aligned to z axis)
-            v2 = ag.unit_vector(beta1[0:3])
-
-            # Find the angle between the zz axis and the plane's normal vector, v2
-            rot_ang = ag.angle_between(v1, v2)
-
-            # Find the rotation axis.
-            rot_ax = ag.unit_vector(np.r_[v2[1], -v2[0], 0])
-
-            # Transform the points so that v2 is aligned to z.
-            transformed = ag.rotate_points(self.scanned_data, rot_ang, rot_ax)
-
-            # Perform least squares.
-            beta2 = ag.lstsq(transformed)
-
-            # Return the fitted plane to the original position of the points.
-            beta2[:3] = ag.rotate_points([beta2[:3]], -rot_ang, rot_ax)
-
-            # Store the fitted plane in the instance.
-            self.plane_coeff = beta2
-
-        else:
-            self.plane_coeff = ag.lstsq(self.scanned_data)
-
-    def quadratic_fit(self, scanned_data):
-        """
-        Fit a quadratic surface to 3d points.
-
-        A regular least squares fit is performed (no error assumed in the given z-values).
-        :param scanned_data:
-        :return:
-        """
-        # best-fit quadratic curve
-        a = np.c_[
-            np.ones(self.scanned_data.shape[0]),
-            self.scanned_data[:, :2],
-            np.prod(self.scanned_data[:, :2], axis=1),
-            self.scanned_data[:, :2] ** 2]
-
-        self.plane_coeff, _, _, _ = scipy.linalg.lstsq(a, scanned_data[:, 2])
-
-    def odr_planar_fit(self, rand_3_estimate=False):
-        """
-        Fit a plane to 3d points.
-
-        Orthogonal distance regression is performed using the odrpack.
-
-        :return:
-        """
-
-        def f_3(beta, xyz):
-            """ implicit definition of the plane"""
-            return beta[0] * xyz[0] + beta[1] * xyz[1] + beta[2] * xyz[2] + beta[3]
-
-        # # Coordinates of the 2D points
-        x = self.scanned_data[:, 0]
-        y = self.scanned_data[:, 1]
-        z = self.scanned_data[:, 2]
-        # x = np.r_[9, 35, -13, 10, 23, 0]
-        # y = np.r_[34, 10, 6, -14, 27, -10]
-        # z = np.r_[100, 101, 101, 100, 101, 101]
-
-        if rand_3_estimate:
-            # initial guess for parameters
-            # select 3 random points
-            i = np.random.choice(len(x), size=3, replace=False)
-
-            # Form the 3 points
-            r_point_1 = np.r_[x[i[0]], y[i[0]], z[i[0]]]
-            r_point_2 = np.r_[x[i[1]], y[i[1]], z[i[1]]]
-            r_point_3 = np.r_[x[i[2]], y[i[2]], z[i[2]]]
-
-            # Two vectors on the plane
-            v_1 = r_point_1 - r_point_2
-            v_2 = r_point_1 - r_point_3
-
-            # normal to the 3-point-plane
-            u_1 = np.cross(v_1, v_2)
-
-            # Construct the first estimation, beta0
-            d_0 = u_1[0] * r_point_1[0] + u_1[1] * r_point_1[1] + u_1[2] * r_point_1[2]
-            beta0 = np.r_[u_1[0], u_1[1], u_1[2], d_0]
-        else:
-            self.planar_fit()
-            beta0 = self.plane_coeff
-
-        # Create the data object for the odr. The equation is given in the implicit form 'a*x + b*y + c*z + d = 0' and
-        # beta=[a, b, c, d] (beta is the vector to be fitted). The positional argument y=1 means that the dimensionality
-        # of the fitting is 1.
-        lsc_data = odr.Data(np.row_stack([x, y, z]), y=1)
-        # Create the odr model
-        lsc_model = odr.Model(f_3, implicit=True)
-        # Create the odr object based on the data, the model and the first estimation vector.
-        lsc_odr = odr.ODR(lsc_data, lsc_model, beta0)
-        # run the regression.
-        lsc_out = lsc_odr.run()
-
-        self.plane_coeff = lsc_out.beta / lsc_out.beta[3]
-
-    def offset_plane(self, offset, offset_points=None):
+    def offset_face(self, offset, offset_points=False):
         """
         Offset the plane and (optionally) the scanned data points.
 
@@ -549,41 +390,11 @@ class FlatFace(Scan3D):
         :param offset_points:
         :return:
         """
-        if offset_points is None:
-            offset_points = False
-
-        self.plane_coeff = np.append(self.plane_coeff[:3], self.plane_coeff[3]-offset)
+        self.ref_plane.offset_plane(offset)
 
         if offset_points:
-            point_list = [p + self.plane_coeff[:3] * offset for p in self.scanned_data]
+            point_list = [p + self.ref_plane.plane_coeff[:3] * offset for p in self.scanned_data]
             self.scanned_data = np.array(point_list)
-
-    def z_return(self, x, y):
-        """
-        Calculate z of a plane for given x, y.
-
-        x : float or numpy.ndarray
-        y : float or numpy.ndarray
-        """
-        if not isinstance(self.plane_coeff, np.ndarray):
-            print('Wrong od missing plane coefficients')
-            return NotImplemented
-        alpha = (-self.plane_coeff / self.plane_coeff[2])
-        z = alpha[0] * x + alpha[1] * y + alpha[3]
-        return z
-
-    def xy_return(self, z):
-        """
-        Intersect with a z=z0 plane.
-
-        x : float or numpy.ndarray
-        y : float or numpy.ndarray
-        """
-        return ag.Line2D.from_line_coeff(
-            self.plane_coeff[0],
-            self.plane_coeff[1],
-            self.plane_coeff[2] * z + self.plane_coeff[3]
-        )
 
     def plot_xy_bounded(self, fig=None, reduced=None):
         """
@@ -610,7 +421,7 @@ class FlatFace(Scan3D):
         x, y = np.meshgrid(x_lims, y_lims)
 
         # evaluate the plane function on the grid.
-        z = self.z_return(x, y)
+        z = self.ref_plane.z_return(x, y)
 
         # or expressed using matrix/vector product
         # z = np.dot(np.c_[xx, yy, np.ones(xx.shape)], self.plane_coeff).reshape(x.shape)
@@ -815,7 +626,7 @@ def main():
 
     # Add all sides and edges.
     # they consist of FlatFace and RoundedEdge instances.
-    sp1.add_all_sides(16, '../../sp1/sp1_side_', planar_fit=True, offset_to_midline=True)
+    sp1.add_all_sides(16, '../../sp1/sp1_side_', fit_planes=True, offset_to_midline=True)
     sp1.add_all_edges(16, '../../sp1/sp1_edge_', ref_lines=True)
 
     # Find a series of points for each edge based on the scanned surface.
