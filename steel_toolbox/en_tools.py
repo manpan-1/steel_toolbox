@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-"""
 
+"""
 A collection of structural steel related functions based on EN1993.
 
 """

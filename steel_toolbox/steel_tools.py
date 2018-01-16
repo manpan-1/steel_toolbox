@@ -1,6 +1,8 @@
-# Engineering and structural steel related functions
+# -*- coding: utf-8 -*-
+
 """
 Module containing methods related to structural steel design.
+
 """
 from math import pi, sqrt, sin, cos, atan, ceil
 import numpy as np
@@ -372,6 +374,7 @@ class Part:
     material : Material object, optional
     struct_props : StructProps object, optional
     bc_loads: BCs object, optional
+
     """
 
     def __init__(self,
@@ -580,7 +583,6 @@ class PolygonalColumn(Part):
         return geometry, cs_props, material, struct_props
 
 
-# Calculate diameter of washer for a given bolt
 def bolt2washer(m_bolt):
     """
     Washer diameter.
@@ -609,7 +611,6 @@ def bolt2washer(m_bolt):
     return d_washer
 
 
-# mean value
 def mean(numbers):
     """
     Mean value.
@@ -634,9 +635,6 @@ def mean(numbers):
     return float(sum(numbers)) / max(len(numbers), 1)
 
 
-# Calculate xy of nodes for a given polygonal profile
-# Returns points for the entire profile (1st and 2nd returned values)
-# and points for a single sector (3rd and 4th returned values)
 def semi_closed_polygon(n_sides, radius, t, tg, rbend, nbend, l_lip):
     """
     Polygon sector nodes.
@@ -661,14 +659,11 @@ def semi_closed_polygon(n_sides, radius, t, tg, rbend, nbend, l_lip):
     l_lip : int
         Length of the lips
 
-    Attributes
-    ----------
-
-    Notes
-    -----
-
-    References
-    ----------
+    Returns
+    -------
+    list of lists
+        Returns points for the entire profile (1st and 2nd returned values), and points for a single sector (3rd and 4th
+        returned values).
 
     """
 
@@ -782,7 +777,7 @@ def semi_closed_polygon(n_sides, radius, t, tg, rbend, nbend, l_lip):
     y_cs = np.concatenate([coord1[1], coord2[1], coord3[1]])
 
     # Return matrices
-    return x_cs, y_cs, x_sector, y_sector
+    return [x_cs, y_cs, x_sector, y_sector]
 
 
 def eccentricity(load, strain, moi, dist, young=None):

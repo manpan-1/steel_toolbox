@@ -3,6 +3,7 @@
 """
 Module with functions related to laboratory work. Currently it contains tools related to 3D scanning and data
 acquired with CATMAN.
+
 """
 
 import numpy as np
@@ -22,13 +23,14 @@ class Scan3D:
     3D model data.
 
     Class of 3D objects. Can be imported from an .stl file of a .txt file of list of node coordinates.
+
     """
 
-    def __init__(self, scanned_data=None, grouped_data=None, centre=None, size=None):
+    def __init__(self, scanned_data=None):
         self.scanned_data = scanned_data
-        self.grouped_data = grouped_data
-        self.centre = centre
-        self.size = size
+        self.grouped_data = None
+        self.centre = None
+        self.size = None
 
     @classmethod
     def from_stl_file(cls, fh, del_original=None):
@@ -60,6 +62,17 @@ class Scan3D:
         return cls(scanned_data=scanned_data)
 
     @classmethod
+    def from_pickle(cls, fh):
+        """
+        Method for importing a pickle file containing x, y, z, coordinates.
+
+        Used to import data exported from blender. The pickle file is should contain a list of lists.
+
+        """
+        with open(fh, 'rb') as f:
+            return cls(scanned_data=np.array(pickle.load(f)))
+
+    @classmethod
     def from_coordinates_file(cls, fh):
         """
         Method reading text files containing x, y, z coordinates.
@@ -81,17 +94,6 @@ class Scan3D:
                 scanned_data[i] = l.split()
 
         return cls(scanned_data=scanned_data)
-
-    @classmethod
-    def from_pickle(cls, fh):
-        """
-        Method for importing a pickle file containing x, y, z, coordinates.
-
-        Used to import data exported from blender. The pickle file is should contain a list of lists.
-
-        """
-        with open(fh, 'rb') as f:
-            return cls(scanned_data=np.array(pickle.load(f)))
 
     @staticmethod
     def repair_stl_file_structure(fh, del_original=None):
@@ -214,6 +216,7 @@ class PolygonalColumnSpecimen:
     A column specimen of polygonal cross-section.
 
     Used for the scanned polygonal specimens.
+
     """
 
     def __init__(self, sides=None, edges=None, centre_line=None, thickness=None):
@@ -370,10 +373,11 @@ class FlatFace(Scan3D):
     Subclass of the Scan3D class, specifically for flat faces.
 
     Used for the individual faces of the polygonal specimens.
+
     """
 
-    def __init__(self, scanned_data=None, ref_plane=None):
-        self.ref_plane = ref_plane
+    def __init__(self, scanned_data=None):
+        self.ref_plane = None
 
         super().__init__(scanned_data)
 
@@ -469,11 +473,12 @@ class FlatFace(Scan3D):
 class RoundedEdge(Scan3D):
     """
     A scanned rounded edge.
+
     """
-    def __init__(self, scanned_data=None, ref_line=None, edge_points=None, circles=None):
-        self.ref_line = ref_line
-        self.edge_points = edge_points
-        self.circles = circles
+    def __init__(self, scanned_data=None):
+        self.ref_line = None
+        self.edge_points = None
+        self.circles = None
 
         super().__init__(scanned_data)
 
@@ -547,6 +552,7 @@ class Experiment:
     Laboratory test data
 
     Class laboratory experiment containing methods for loading and manipulating data recorded with CATMAN software.
+
     """
 
     def __init__(self, header, data):
@@ -636,47 +642,9 @@ def main():
     sp1.plot_all()
     sp1.print_report()
 
-    # The following code is used to cross-check the validity of the results. Points for 2 planes are created and used
-    # for testing the fitting and plotting methods.
-
-    # Test xyz data from randomised z=1x+2y+3 for x,y values from -10 t0 +10
-    def f_3(beta, xy):
-        """ implicit definition of the plane"""
-        return beta[0] * xy[0] + beta[1] * xy[1] + beta[2]
-
-    def make_plane_data(beta):
-        x = [x + np.random.rand() for x in np.linspace(-10, 10, 21)] + [x + np.random.rand() for x in
-                                                                        np.linspace(-10, 10, 21)] + [
-                x + np.random.rand() for x in np.linspace(-10, 10, 21)]
-        y = [x + np.random.rand() for x in np.linspace(-10, 10, 21)] + [x + np.random.rand() for x in
-                                                                        np.linspace(0, 20, 21)] + [x + np.random.rand()
-                                                                                                   for x in
-                                                                                                   np.linspace(10, 30,
-                                                                                                               21)]
-        z = f_3(beta, np.row_stack([x, y]))
-        x = np.r_[x]
-        y = np.r_[y]
-        z = np.r_[z]
-        return FlatFace(np.transpose(np.row_stack([x, y, z])))
-
-    # Create points for the two planes.
-    p1 = make_plane_data([1, 0, -4])
-    p2 = make_plane_data([0, 1, -4])
-
-    # Fit a plane on the created points.
-    p1.odr_planar_fit()
-    p2.odr_planar_fit()
-    lp12 = p1 & p2
-
-    # Plot the results.
-    fig2 = plt.figure()
-    Axes3D(fig2)
-    p1.plot_xy_bounded(fig=fig2)
-    p2.plot_xy_bounded(fig=fig2)
-    lp12.plot_line(fig=fig2, ends=[-10, 10])
-
     # Return the specimen
     return sp1
 
-# if __name__ == "__main__":
-# main()
+
+if __name__ == "__main__":
+    main()
