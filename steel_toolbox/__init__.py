@@ -5,6 +5,6 @@
 __author__ = """Panagiotis Manoleas"""
 __email__ = 'manpan@ltu.se'
 __version__ = '0.1.0'
-__all__ = ['en_tools', 'lab_tools', 'parametric_tools', 'steel_tools', 'analytic_geometry']
+__all__ = ['steel_design', 'polygonal', 'lab_tests', 'scan_3D', 'analytic_geometry', 'parametric']
 
-from steel_toolbox import en_tools, lab_tools, parametric_tools, steel_tools, analytic_geometry
+from steel_toolbox import steel_design, polygonal, lab_tests, scan_3D, analytic_geometry, parametric

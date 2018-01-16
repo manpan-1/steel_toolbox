@@ -1,52 +1,394 @@
 # -*- coding: utf-8 -*-
 
 """
-A collection of structural steel related functions based on EN1993.
+Module for the structural design of steel members.
 
 """
 
-from math import sqrt, pi, sin, cos, atan
+import numpy as np
 
 
-# Define classes
-# Cross-section class
-class CrossSection:
+class Geometry:
     """
-    Cross-section properties.
+    Structural element geometry.
 
-    Geometric and inertia parameters for structural purpose cross-section.
+    Class for the geometric properties of a structural element.
+
+    Parameters
+    ----------
+    cs_sketch : CsSketch object
+        Cross-section sketch.
+    length : float
+        Member's length.
+    """
+
+    def __init__(self, cs_sketch, length):
+        self.cs_sketch = cs_sketch
+        self.length = length
+
+
+class CsSketch:
+    """
+    Cross-section geometry.
+
+    Parameters
+    ----------
+    nodes : list
+        List of points.
+    elem : list
+        Element connectivity.
+    """
+
+    def __init__(self, nodes, elem):
+        self.nodes = nodes
+        self.elem = elem
+
+
+class CsProps:
+    """
+    Cross-section properties
+
+    Class for the mass properties of cross-sections. The properties can be calculated using the from_cs_sketch() method.
 
     Parameters
     ----------
     area : float
-        [mm^2] Cross-sectional area.
-    moi_y : float
-        [mm^4] Moment of inertia around y-axis.
-        y-axis on the centre of gravity but not necessarily principal.
-    moi_z : float
+        Cross-sectional area.
+    xc : float
+        `x` coordinate of the gravity center.
+    yc : float
+        `y` coordinate of the gravity center.
+    moi_xx : float
+        Moment of inertia around `x` axis.
+    moi_yy : float
+        Moment of inertia around `y` axis.
+    moi_xy : float
+        Polar moment of inertia.
+    theta_principal : float
+        Rotation of the principal axes.
+    moi_1 : float
+        Moment of inertia around the major axis.
+    moi_2 : float
+        Moment of inertia around the minor axis.
+    """
 
-    Attributes
+    def __init__(self,
+                 area=None,
+                 xc=None,
+                 yc=None,
+                 moi_xx=None,
+                 moi_yy=None,
+                 moi_xy=None,
+                 theta_principal=None,
+                 moi_1=None,
+                 moi_2=None
+                 ):
+
+        self.area = area
+        self.xc = xc
+        self.yc = yc
+        self.moi_xx = moi_xx
+        self.moi_yy = moi_yy
+        self.moi_xy = moi_xy
+        self.theta_principal = theta_principal
+        self.moi_1 = moi_1
+        self.moi_2 = moi_2
+
+    @classmethod
+    def from_cs_sketch(cls, cs_sketch):
+        """
+        Cross-section calculator.
+
+        Alternative constructor, calculates mass properties of a given sc sketch and returns a CsProps object.
+
+        Parameters
+        ----------
+        cs_sketch : CsSketch object
+
+        Notes
+        -----
+
+        """
+
+        nele = len(cs_sketch.elem[0])
+        node = cs_sketch.elem[0] + cs_sketch.elem[1]
+        nnode = 0
+        j = 0
+
+        while node:
+            i = [ii for ii, x in enumerate(node) if x == node[0]]
+            for ii in sorted(i, reverse=True):
+                del node[ii]
+            if len(i) == 2:
+                j += 1
+            nnode += 1
+
+        # classify the section type (currently not used)
+        # if j == nele:
+        #     section = 'close'  # single cell
+        # elif j == nele - 1:
+        #     section = 'open'  # singly-branched
+        # else:
+        #     section = 'open'  # multi-branched
+
+        # Calculate the cs-properties
+        tt = []
+        xm = []
+        ym = []
+        xd = []
+        yd = []
+        side_length = []
+        for i in range(nele):
+            sn = cs_sketch.elem[0][i]
+            fn = cs_sketch.elem[1][i]
+            # thickness of the element
+            tt = tt + [cs_sketch.elem[2][i]]
+            # compute the coordinate of the mid point of the element
+            xm = xm + [mean_list([cs_sketch.nodes[0][sn], cs_sketch.nodes[0][fn]])]
+            ym = ym + [mean_list([cs_sketch.nodes[1][sn], cs_sketch.nodes[1][fn]])]
+            # compute the dimension of the element
+            xd = xd + [(cs_sketch.nodes[0][fn] - cs_sketch.nodes[0][sn])]
+            yd = yd + [(cs_sketch.nodes[1][fn] - cs_sketch.nodes[1][sn])]
+            # compute the length of the element
+            side_length = side_length + [np.sqrt(xd[i] ** 2 + yd[i] ** 2)]
+
+        # calculate cross sectional area
+        area = sum([a * b for a, b in zip(side_length, tt)])
+        # compute the centroid
+        xc = sum([a * b * c for a, b, c in zip(side_length, tt, xm)]) / area
+        yc = sum([a * b * c for a, b, c in zip(side_length, tt, ym)]) / area
+
+        if abs(xc / np.sqrt(area)) < 1e-12:
+            xc = 0
+
+        if abs(yc / np.sqrt(area)) < 1e-12:
+            yc = 0
+
+        # Calculate MOI
+        moi_xx = sum([sum(a) for a in zip([a ** 2 * b * c / 12 for a, b, c in zip(yd, side_length, tt)],
+                                          [(a - yc) ** 2 * b * c for a, b, c in
+                                           zip(ym, side_length, tt)])])
+        moi_yy = sum([sum(a) for a in zip([a ** 2 * b * c / 12 for a, b, c in zip(xd, side_length, tt)],
+                                          [(a - xc) ** 2 * b * c for a, b, c in
+                                           zip(xm, side_length, tt)])])
+        moi_xy = sum(
+            [sum(a) for a in zip([a * b * c * d / 12 for a, b, c, d in zip(xd, yd, side_length, tt)],
+                                 [(a - xc) * (b - yc) * c * d for a, b, c, d in
+                                  zip(xm, ym, side_length, tt)])])
+
+        if abs(moi_xy / area ** 2) < 1e-12:
+            moi_xy = 0
+
+        # Calculate angle of principal axes
+        if moi_xx == moi_yy:
+            theta_principal = np.pi / 2
+        else:
+            theta_principal = np.arctan(
+                (-2 * moi_xy) / (moi_xx - moi_yy)) / 2
+
+        # Change to centroid principal coordinates
+        # coord12 = [[a - xc for a in cs_sketch.nodes[0]],
+        #            [a - yc for a in cs_sketch.nodes[1]]]
+        coord12 = np.array([[np.cos(theta_principal), np.sin(theta_principal)],
+                            [-np.sin(theta_principal), np.cos(theta_principal)]]).dot(cs_sketch.nodes)
+
+        # re-calculate cross sectional properties for the centroid
+        for i in range(nele):
+            sn = cs_sketch.elem[0][i]
+            fn = cs_sketch.elem[1][i]
+            # calculate the coordinate of the mid point of the element
+            xm = xm + [mean_list([coord12[0][sn], coord12[0][fn]])]
+            ym = ym + [mean_list([coord12[1][sn], coord12[1][fn]])]
+            # calculate the dimension of the element
+            xd = xd + [(coord12[0][fn] - coord12[0][sn])]
+            yd = yd + [(coord12[1][fn] - coord12[1][sn])]
+
+        # calculate the principal moment of inertia
+        moi_1 = sum([sum(a) for a in zip([a ** 2 * b * c / 12 for a, b, c in zip(yd, side_length, tt)],
+                                         [(a - yc) ** 2 * b * c for a, b, c in
+                                          zip(ym, side_length, tt)])])
+        moi_2 = sum([sum(a) for a in zip([a ** 2 * b * c / 12 for a, b, c in zip(xd, side_length, tt)],
+                                         [(a - xc) ** 2 * b * c for a, b, c in
+                                          zip(xm, side_length, tt)])])
+
+        return cls(
+            area=area,
+            xc=xc,
+            yc=yc,
+            moi_xx=moi_xx,
+            moi_yy=moi_yy,
+            moi_xy=moi_xy,
+            theta_principal=theta_principal,
+            moi_1=moi_1,
+            moi_2=moi_2
+        )
+
+
+class Material:
+    """
+    Material properties.
+
+    Parameters
     ----------
-
-    Notes
-    -----
-
-    References
-    ----------
+    e_modulus : float
+        Modulus of elasticity.
+    poisson : float
+        Poisson's ratio.
+    f_yield : float
+        Yield stress
+    plasticity : tuple
+        Plasticity table (tuple of stress-plastic strain pairs).
+        By default, no plasticity is considered.
 
     """
 
-    def __init__(self, area, moi_y, moi_z):
-        self.area = area
-        self.moi_y = moi_y
-        self.moi_z = moi_z
-
-
-class Member:
-    def __init__(self, profile, length, f_yield):
-        self.profile = profile
-        self.length = length
+    def __init__(self, e_modulus, poisson, f_yield, plasticity=None):
+        self.e_modulus = e_modulus
+        self.poisson = poisson
         self.f_yield = f_yield
+        self.plasticity = plasticity
+
+    # TODO change default value to S235
+    @staticmethod
+    def plastic_table(nominal=None):
+        """
+        Plasticity tables.
+
+        Tables with plastic stress-strain curve values for different steels
+        given a steel name, e.g 'S355'
+
+        Parameters
+        ----------
+        nominal : string [optional]
+            Steel name. Default value, 'S355'
+
+        Attributes
+        ----------
+
+        Notes
+        -----
+
+        References
+        ----------
+
+        """
+        if nominal is None:
+            nominal = 'S355'
+
+        if nominal is 'S355':
+            table = (
+                (381.1, 0.0),
+                (391.2, 0.0053),
+                (404.8, 0.0197),
+                (418.0, 0.0228),
+                (444.2, 0.0310),
+                (499.8, 0.0503),
+                (539.1, 0.0764),
+                (562.1, 0.1009),
+                (584.6, 0.1221),
+                (594.4, 0.1394),
+                (5961, 1.)
+            )
+
+        if nominal is 'S650':
+            table = (
+                (760., 0.0),
+                (770., 0.022),
+                (850., 0.075),
+                (900., 0.1),
+                (901., 1.)
+            )
+
+        return table
+
+    @classmethod
+    def from_nominal(cls, nominal_strength=None):
+
+        """
+        Alternative constructor creating a steel material given of a given nominal strength.
+        """
+        if nominal_strength is None:
+            f_yield = 235.
+        else:
+            f_yield = float(nominal_strength.replace('S', ''))
+
+        plasticity = cls.plastic_table(nominal=nominal_strength)
+        return cls(210000., 0.3, f_yield, plasticity=plasticity)
+
+
+class BCs:
+    def __init__(self, bcs):
+        self.bcs = bcs
+
+    @classmethod
+    def from_hinged(cls):
+        return cls([[1, 1, 1, 0, 0, 0], [1, 1, 1, 0, 0, 0]])
+
+
+class StructProps:
+    """
+    Structural properties of a member.
+
+    Parameters
+    ----------
+    t_classification : float, optional
+        Classification of a tube, d/(t^2*e)
+    p_classification : float, optional
+        Classification of a plate, c/(t*e)
+    lmbda_y : float, optional
+        Flexural slenderness on the strong axis.
+    lmbda_z : float, optional
+        Flexural slenderness on the weak axis.
+    n_pl_rd : float, optional
+        Plastic axial compression resistance.
+    n_b_rd_shell : float, optional
+        Shell buckling resistance
+    """
+
+    def __init__(self,
+                 t_classification=None,
+                 p_classification=None,
+                 lmbda_y=None,
+                 lmbda_z=None,
+                 n_pl_rd=None,
+                 n_b_rd_shell=None
+                 ):
+        self.t_classification = t_classification
+        self.p_classification = p_classification
+        self.lmbda_y = lmbda_y
+        self.lmbda_z = lmbda_z
+        self.n_pl_rd = n_pl_rd
+        self.n_b_rd_shell = n_b_rd_shell
+
+
+class Part:
+    """
+    Structural part.
+
+    Class describing a structural part, including geometry, boundary conditions loads and resistance.
+
+    Parameters
+    ----------
+    geometry : Geometry object, optional
+    cs_props : CsProps object, optional
+    material : Material object, optional
+    struct_props : StructProps object, optional
+    bc_loads: BCs object, optional
+
+    """
+
+    def __init__(self,
+                 geometry=None,
+                 cs_props=None,
+                 material=None,
+                 struct_props=None,
+                 bc_loads=None
+                 ):
+        self.geometry = geometry
+        self.cs_props = cs_props
+        self.material = material
+        self.bc_loads = bc_loads
+        self.struct_props = struct_props
 
 
 # SIMPLY SUPPORTED PLATE
@@ -108,8 +450,8 @@ def n_pl_rd(
 
     # Aeff calculation.
     # Reduction factor for the effective area of the profile acc. to EC3-1-5
-    classification = width / (thickness * sqrt(235 / f_yield))
-    lambda_p = classification / (28.4 * sqrt(k_sigma))
+    classification = width / (thickness * np.sqrt(235 / f_yield))
+    lambda_p = classification / (28.4 * np.sqrt(k_sigma))
     if lambda_p > 0.673 and plate_class(thickness, width, f_yield) == 4:
         rho = (lambda_p - 0.055 * (3 + psi)) / lambda_p ** 2
     else:
@@ -166,7 +508,7 @@ def plate_class(
     width, thickness, f_yield = float(width), float(thickness), float(f_yield)
 
     # Calculate classification
-    classification = width / (thickness * sqrt(235. / f_yield))
+    classification = width / (thickness * np.sqrt(235. / f_yield))
     if classification <= 33.:
         p_class = 1
     elif classification <= 38.:
@@ -305,15 +647,15 @@ def sigma_x_rd(
         return
 
     # Critical meridinal stress, calculated on separate function
-    sigma_cr = sigma_x_rcr(thickness, radius, length)
+    sigma_cr, category = sigma_x_rcr(thickness, radius, length)
 
     # Shell slenderness
-    lmda = sqrt(f_y_k / sigma_cr[0])
-    delta_w_k = (1. / q_factor) * sqrt(radius / thickness) * thickness
+    lmda = np.sqrt(f_y_k / sigma_cr)
+    delta_w_k = (1. / q_factor) * np.sqrt(radius / thickness) * thickness
     alpha = 0.62 / (1 + 1.91 * (delta_w_k / thickness) ** 1.44)
     beta = 0.6
     eta = 1.
-    if sigma_cr[1] is 'long':
+    if category is 'long':
         # For long cylinders, a formula is suggested for lambda, EC3-1-6 D1.2.2(4)
         # Currently, the general form is used. to be fixed.
         lmda_0 = 0.2
@@ -321,7 +663,7 @@ def sigma_x_rd(
     else:
         lmda_0 = 0.2
 
-    lmda_p = sqrt(alpha / (1. - beta))
+    lmda_p = np.sqrt(alpha / (1. - beta))
 
     # Buckling reduction factor, chi
     if lmda <= lmda_0:
@@ -377,7 +719,7 @@ def n_cr_shell(
     thickness, radius, length = float(thickness), float(radius), float(length)
 
     # Elastic critical load acc to EN3-1-6 Annex D
-    nn_cr_shell = 2 * pi * radius * thickness * sigma_x_rcr(thickness, radius, length)[0]
+    nn_cr_shell = 2 * np.pi * radius * thickness * sigma_x_rcr(thickness, radius, length)[0]
 
     # Return value
     return nn_cr_shell
@@ -407,8 +749,10 @@ def sigma_x_rcr(
 
     Returns
     -------
-    float
-        [N] Critical load
+    list
+        List of 2 elements:
+        a) float, Critical load [N]
+        b) string, length category
 
     References
     ----------
@@ -420,7 +764,7 @@ def sigma_x_rcr(
     thickness, radius, length = float(thickness), float(radius), float(length)
 
     # Elastic critical load acc. to EN3-1-6 Annex D
-    omega = length / sqrt(radius * thickness)
+    omega = length / np.sqrt(radius * thickness)
     if 1.7 <= omega <= 0.5 * (radius / thickness):
         c_x = 1.
         length_category = 'medium'
@@ -530,7 +874,7 @@ def n_cr_flex(
         e_modulus = float(e_modulus)
 
     # Euler's critical load
-    nn_cr_flex = (pi ** 2) * e_modulus * moi_y / (kapa_bc * length) ** 2
+    nn_cr_flex = (np.pi ** 2) * e_modulus * moi_y / (kapa_bc * length) ** 2
 
     # Return the result
     return nn_cr_flex
@@ -642,11 +986,11 @@ def n_cr_tor(
     g_modulus = e_modulus / (2 * (1 + poisson))
 
     # Polar radius of gyration.
-    i_pol = sqrt((moi_y0 + moi_z0) / area)
-    moi_zero = sqrt(i_pol ** 2 + y_0 ** 2 + z_0 ** 2)
+    i_pol = np.sqrt((moi_y0 + moi_z0) / area)
+    moi_zero = np.sqrt(i_pol ** 2 + y_0 ** 2 + z_0 ** 2)
 
     # Calculation of critical torsional load.
-    nn_cr_tor = (1 / moi_zero ** 2) * (g_modulus * moi_torsion + (pi ** 2 * e_modulus * moi_warp / length ** 2))
+    nn_cr_tor = (1 / moi_zero ** 2) * (g_modulus * moi_torsion + (np.pi ** 2 * e_modulus * moi_warp / length ** 2))
 
     # Return the result
     return nn_cr_tor
@@ -755,26 +1099,26 @@ def n_cr_flex_tor(
 
     # Angle of principal axes
     if abs(moi_y - moi_z) < 1e-20:
-        theta = pi / 4
+        theta = np.pi / 4
     else:
-        theta = -atan((2 * moi_yz) / (moi_y - moi_z)) / 2
+        theta = -np.arctan((2 * moi_yz) / (moi_y - moi_z)) / 2
 
     # Distance of the rotation centre to the gravity centre on the
     # principal axes coordinate system
-    y_0 = y_sc * cos(-theta) - z_sc * sin(-theta)
-    z_0 = z_sc * cos(-theta) + y_sc * sin(-theta)
+    y_0 = y_sc * np.cos(-theta) - z_sc * np.sin(-theta)
+    z_0 = z_sc * np.cos(-theta) + y_sc * np.sin(-theta)
 
     # Moment of inertia around principal axes.
-    moi_y0 = (moi_y + moi_z) / 2 + sqrt(((moi_y - moi_z) / 2) ** 2 + moi_yz ** 2)
-    moi_z0 = (moi_y + moi_z) / 2 - sqrt(((moi_y - moi_z) / 2) ** 2 + moi_yz ** 2)
+    moi_y0 = (moi_y + moi_z) / 2 + np.sqrt(((moi_y - moi_z) / 2) ** 2 + moi_yz ** 2)
+    moi_z0 = (moi_y + moi_z) / 2 - np.sqrt(((moi_y - moi_z) / 2) ** 2 + moi_yz ** 2)
 
     # Polar radius of gyration.
-    i_pol = sqrt((moi_y0 + moi_z0) / area)
-    moi_zero = sqrt(i_pol ** 2 + y_0 ** 2 + z_0 ** 2)
+    i_pol = np.sqrt((moi_y0 + moi_z0) / area)
+    moi_zero = np.sqrt(i_pol ** 2 + y_0 ** 2 + z_0 ** 2)
 
     # Independent critical loads for flexural and torsional modes.
-    n_cr_max = (pi ** 2 * e_modulus * moi_y0) / (length ** 2)
-    n_cr_min = (pi ** 2 * e_modulus * moi_z0) / (length ** 2)
+    n_cr_max = (np.pi ** 2 * e_modulus * moi_y0) / (length ** 2)
+    n_cr_min = (np.pi ** 2 * e_modulus * moi_z0) / (length ** 2)
     n_tor = n_cr_tor(
         length,
         area,
@@ -810,27 +1154,27 @@ def n_cr_flex_tor(
 
     n_cr_1 = bbbb / (3. * aaaa) - (2 ** (1. / 3) * (-bbbb ** 2 + 3 * aaaa * cccc)) / \
                                   (3. * aaaa * (2 * bbbb ** 3 - 9 * aaaa * bbbb * cccc + 27 * aaaa ** 2 * dddd + \
-                                                (cf * sqrt(det_3))) ** (1. / 3)) + (
+                                                (cf * np.sqrt(det_3))) ** (1. / 3)) + (
                                                                                    2 * bbbb ** 3 - 9 * aaaa * bbbb * cccc + 27 * aaaa ** 2 * dddd + \
-                                                                                   (cf * sqrt(det_3))) ** (1. / 3) / (
+                                                                                   (cf * np.sqrt(det_3))) ** (1. / 3) / (
                                                                                    3. * 2 ** (1. / 3) * aaaa)
 
-    n_cr_2 = bbbb / (3. * aaaa) + ((1 + (0 + 1j) * sqrt(3)) * (-bbbb ** 2 + 3 * aaaa * cccc)) / \
+    n_cr_2 = bbbb / (3. * aaaa) + ((1 + (0 + 1j) * np.sqrt(3)) * (-bbbb ** 2 + 3 * aaaa * cccc)) / \
                                   (3. * 2 ** (2. / 3) * aaaa * (
                                   2 * bbbb ** 3 - 9 * aaaa * bbbb * cccc + 27 * aaaa ** 2 * dddd + \
-                                  (cf * sqrt(det_3))) ** (1. / 3)) - ((1 - (0 + 1j) * sqrt(3)) * \
+                                  (cf * np.sqrt(det_3))) ** (1. / 3)) - ((1 - (0 + 1j) * np.sqrt(3)) * \
                                                                       (
                                                                       2 * bbbb ** 3 - 9 * aaaa * bbbb * cccc + 27 * aaaa ** 2 * dddd + \
-                                                                      (cf * sqrt(det_3))) ** (1. / 3)) / (
+                                                                      (cf * np.sqrt(det_3))) ** (1. / 3)) / (
                                                                      6. * 2 ** (1. / 3) * aaaa)
 
-    n_cr_3 = bbbb / (3. * aaaa) + ((1 - (0 + 1j) * sqrt(3)) * (-bbbb ** 2 + 3 * aaaa * cccc)) / \
+    n_cr_3 = bbbb / (3. * aaaa) + ((1 - (0 + 1j) * np.sqrt(3)) * (-bbbb ** 2 + 3 * aaaa * cccc)) / \
                                   (3. * 2 ** (2. / 3) * aaaa * (
                                   2 * bbbb ** 3 - 9 * aaaa * bbbb * cccc + 27 * aaaa ** 2 * dddd + \
-                                  (cf * sqrt(det_3))) ** (1. / 3)) - ((1 + (0 + 1j) * sqrt(3)) * \
+                                  (cf * np.sqrt(det_3))) ** (1. / 3)) - ((1 + (0 + 1j) * np.sqrt(3)) * \
                                                                       (
                                                                       2 * bbbb ** 3 - 9 * aaaa * bbbb * cccc + 27 * aaaa ** 2 * dddd + \
-                                                                      (cf * sqrt(det_3))) ** (1. / 3)) / (
+                                                                      (cf * np.sqrt(det_3))) ** (1. / 3)) / (
                                                                      6. * 2 ** (1. / 3) * aaaa)
 
     # Lowest root is the critical load
@@ -905,7 +1249,7 @@ def lmbda_flex(
     )
 
     # Flexural slenderness EN3-1-1 6.3.1.3 (1)
-    lmbda_flexx = sqrt(area * f_yield / n_cr)
+    lmbda_flexx = np.sqrt(area * f_yield / n_cr)
 
     # Return the result
     return lmbda_flexx
@@ -1003,7 +1347,7 @@ def chi_flex(
 
     phi = (1 + alpha * (lmda - 0.2) + lmda ** 2) / 2.
 
-    chi = 1 / (phi + sqrt(phi ** 2 - lmda ** 2))
+    chi = 1 / (phi + np.sqrt(phi ** 2 - lmda ** 2))
 
     if chi > 1.:
         chi = 1.
@@ -1132,9 +1476,9 @@ def shear_area(bolt_size, shear_threaded=None):
 
     # Calculate area
     if shear_threaded:
-        a_shear = 0.784 * (pi * bolt_size ** 2 / 4)
+        a_shear = 0.784 * (np.pi * bolt_size ** 2 / 4)
     else:
-        a_shear = pi * bolt_size ** 2 / 4
+        a_shear = np.pi * bolt_size ** 2 / 4
 
     # Return
     return a_shear
@@ -1144,7 +1488,7 @@ def f_v_rd(
         bolt_size,
         bolt_grade,
         shear_threaded=None,
-        gamma_M2=None
+        gamma_m2=None
 ):
     # Docstring
     """
@@ -1161,7 +1505,7 @@ def f_v_rd(
     shear_threaded : bool, optional
         Designates if the shear plane is on the threaded portion or not.
         Default in False, which implies shearing of the non-threaded portion
-    gamma_M2 : float, optional
+    gamma_m2 : float, optional
         Safety factor.
         Default value is 1.25
 
@@ -1176,10 +1520,10 @@ def f_v_rd(
     if shear_threaded is None:
         shear_threaded = False
 
-    if gamma_M2 is None:
-        gamma_M2 = 1.25
+    if gamma_m2 is None:
+        gamma_m2 = 1.25
     else:
-        gamma_M2 = float(gamma_M2)
+        gamma_m2 = float(gamma_m2)
 
     # av coefficient
     if shear_threaded and bolt_grade == (4.6 or 8.6):
@@ -1194,7 +1538,7 @@ def f_v_rd(
     a_shear = shear_area(bolt_size, shear_threaded)
 
     # Shear resistance
-    ff_v_rd = a_v * f_ub * a_shear / gamma_M2
+    ff_v_rd = a_v * f_ub * a_shear / gamma_m2
 
     # Return value
     return ff_v_rd
@@ -1213,7 +1557,7 @@ def bolt_min_dist(d_0):
     p_1 = 2.2 * d_0
     p_2 = 2.4 * d_0
 
-    return (e_1, e_2, e_3, p_1, p_2)
+    return e_1, e_2, e_3, p_1, p_2
 
 
 def f_b_rd(bolt_size, bolt_grade, thickness, steel_grade, f_yield, distances, d_0):
@@ -1235,10 +1579,62 @@ def f_b_rd(bolt_size, bolt_grade, thickness, steel_grade, f_yield, distances, d_
 
 
 def f_weld_perp():
-    f_w_1 = (sqrt(2) / 2) * a_weld * l_weld * f_ult / (b_w * gamma_m2)
-    f_w_2 = 0.9 * f_ult * a_weld * l_weld * sqrt(2) / gamma_m2
+    # f_w_1 = (sqrt(2) / 2) * a_weld * l_weld * f_ult / (b_w * gamma_m2)
+    # f_w_2 = 0.9 * f_ult * a_weld * l_weld * sqrt(2) / gamma_m2
     pass
 
 
 def f_weld_paral():
     pass
+
+
+def bolt2washer(m_bolt):
+    """
+    Washer diameter.
+
+    Return the diameter of the washer for a given bolt diameter.
+    The calculation is based on a function derived from linear regression
+    on ENXXXXXXX[REF].
+
+    Parameters
+    ----------
+    m_bolt : float
+        Bolt diameter
+
+    Attributes
+    ----------
+
+    Notes
+    -----
+
+    References
+    ----------
+
+    """
+
+    d_washer = np.ceil(1.5893 * m_bolt + 5.1071)
+    return d_washer
+
+
+def mean_list(numbers):
+    """
+    Mean value.
+
+    Calculate the average for a list of numbers.
+
+    Parameters
+    ----------
+    numbers : list
+
+    Attributes
+    ----------
+
+    Notes
+    -----
+
+    References
+    ----------
+
+    """
+
+    return float(sum(numbers)) / max(len(numbers), 1)

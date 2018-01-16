@@ -1,17 +1,12 @@
 # -*- coding: utf-8 -*-
 
 """
-Module with functions related to laboratory work. Currently it contains tools related to 3D scanning and data
-acquired with CATMAN.
+Module containing methods related to 3D scanning.
 
 """
-
 import numpy as np
-import csv
-import codecs
 from stl import mesh
 import os
-from steel_toolbox.steel_tools import eccentricity
 from steel_toolbox import analytic_geometry as ag
 import pickle
 from matplotlib import pyplot as plt
@@ -211,163 +206,6 @@ class Scan3D:
         ax.plot_trisurf(x, y, z)
 
 
-class PolygonalColumnSpecimen:
-    """
-    A column specimen of polygonal cross-section.
-
-    Used for the scanned polygonal specimens.
-
-    """
-
-    def __init__(self, sides=None, edges=None, centre_line=None, thickness=None):
-        if sides is None:
-            sides = []
-
-        if edges is None:
-            edges = []
-
-        self.sides = sides
-        self.edges = edges
-        self.centre_line = centre_line
-        self.thickness = thickness
-
-    def add_centre_line(self, point1, point2):
-        """
-        Calculate the centre axis of the column from 2 given points.
-
-        :return:
-        """
-        self.centre_line = ag.Line3D.from_2_points(point1, point2)
-
-    def add_single_side_from_pickle(self, filename):
-        """
-        Create a FlatFace instance as one side af the polygon column.
-
-        The FlatFace instance is created from a pickle file of scanned data points.
-
-        :param filename:
-        :return:
-        """
-        self.sides.append(FlatFace.from_pickle(filename))
-
-    def add_all_sides(self, n_sides, prefix, fit_planes=None, offset_to_midline=False):
-        """
-        Add multiple sides.
-
-        Multiple FlatFace instances are created as sides of the polygonal column. A series of files containing scanned
-        data points must be given. The files should be on the same path and have a filename structure as:
-        `path/basenameXX.pkl`, where XX is an id number in ascending order starting from 01.
-        Only the `path/filename` is given as input to this method.
-
-        :param n_sides:
-        :param prefix:
-        :param fit_planes:
-        :return:
-        """
-        if fit_planes is None:
-            fit_planes = False
-
-        self.sides = [FlatFace.from_pickle(prefix + '{:02d}.pkl'.format(x)) for x in range(1, n_sides + 1)]
-
-        if fit_planes:
-            [x.fit_plane() for x in self.sides]
-        if offset_to_midline:
-            offset = self.thickness / 2
-            [x.offset_face(offset, offset_points=True) for x in self.sides]
-
-    def add_single_edge_from_pickle(self, filename):
-        """
-        Create a RoundEdge instance as one edges af the polygon column.
-
-        The RoundEdge instance is created from a pickle file of scanned data points.
-
-        :param filename:
-        :return:
-        """
-        self.edges.append(RoundedEdge.from_pickle(filename))
-
-    def add_all_edges(self, n_sides, prefix, ref_lines=False):
-        """
-        Add multiple edges.
-
-        Multiple RoundEdge instances are created as edges of the polygonal column. A series of files containing scanned
-        data points must be given. The files should be on the same path and have a filename structure as:
-        `path/basenameXX.pkl`, where XX is an id number in ascending order starting from 01.
-        Only the `path/filename` is given as input to this method.
-
-        After adding the sequential edges, if ref_lines=True, the reference lines are calculated as the intersections
-        of sequential sides.
-
-        :param n_sides:
-        :param prefix:
-        :param ref_lines:
-        :return:
-        """
-        self.edges = [RoundedEdge.from_pickle(prefix + '{:02d}.pkl'.format(x)) for x in range(1, n_sides + 1)]
-
-        if ref_lines:
-            for x in range(-len(self.sides), 0):
-                self.edges[x].add_ref_line(self.sides[x].ref_plane & self.sides[x + 1].ref_plane)
-
-    def find_real_edges(self, offset_to_midline=False):
-        """
-        Find edge points on the scanned rounded edge.
-
-        A series of points is returned which represent the real edge of the polygonal column. Each point is calculated
-        as  the intersection of a circle and a line at different heights of the column, where the circle is best fit to
-        the rounded edge scanned points and the line passing through the reference edge (see `add_all_edges`
-        documentation) and the polygon's centre line.
-
-        :return:
-        """
-        if offset_to_midline:
-            offset = -self.thickness / 2
-        else:
-            offset = 0
-
-        if isinstance(self.centre_line, ag.Line3D) and isinstance(self.edges, list):
-            for x in self.edges:
-                x.fit_circles(axis=2, offset=offset)
-                x.intersect_data(self.centre_line)
-        else:
-            NotImplemented
-
-    def plot_all(self):
-        """
-        Plot all data.
-
-        :return:
-        """
-        max_z = max([x.scanned_data[:, 2].max() for x in self.sides])
-        min_z = min([x.scanned_data[:, 2].min() for x in self.sides])
-        fig1 = plt.figure()
-        Axes3D(fig1)
-        for i in range(-len(self.sides), 0):
-            self.sides[i].plot_xy_bounded(reduced=0.003, fig=fig1)
-            self.edges[i].ref_line.plot_line(fig=fig1, ends=[min_z, max_z])
-
-    def print_report(self):
-        """
-        Print a report for the polygon column.
-
-        :return:
-        """
-        max_z = max([x.scanned_data[:, 2].max() for x in self.sides])
-        min_z = min([x.scanned_data[:, 2].min() for x in self.sides])
-        for i in range(len(self.sides)):
-            print('Side {} is : {}'.format(i + 1, self.sides[i].ref_plane.plane_coeff))
-            print('')
-            print('Edge {} (sides {}-{})\n    Direction : {}\n    Through points : \n{}\n{}'.format(
-                i + 1,
-                i + 1,
-                i + 2,
-                self.edges[i].ref_line.parallel,
-                self.edges[i].ref_line.xy_for_z(min_z),
-                self.edges[i].ref_line.xy_for_z(max_z))
-            )
-            print('')
-
-
 class FlatFace(Scan3D):
     """
     Subclass of the Scan3D class, specifically for flat faces.
@@ -547,103 +385,8 @@ class RoundedEdge(Scan3D):
             self.circles[-1].radius = self.circles[-1].radius + offset
 
 
-class Experiment:
-    """
-    Laboratory test data
-
-    Class laboratory experiment containing methods for loading and manipulating data recorded with CATMAN software.
-
-    """
-
-    def __init__(self, header, data):
-        self.header = header
-        self.data = data
-
-    def add_eccentricity(self, axis, column, moi, min_dist, thickness, young):
-        """
-        Calculate eccentricity.
-
-        Adds a column in the data dictionary for the eccentricity of the load application on a given axis based on
-        two opposite strain measurements.
-        """
-
-        self.data['e_' + axis] = []
-        for load, strain1, strain2 in zip(self.data['Load'], self.data[column[0]], self.data[column[1]]):
-            self.data['e_' + axis].append(eccentricity(
-                load * 1000,
-                [strain1 * 1e-6, strain2 * 1e-6],
-                moi,
-                min_dist + thickness / 2,
-                young)
-            )
-
-    @classmethod
-    def from_file(cls, fh):
-        """
-        Method reading text files containing data recorded with CATMAN.
-
-        Used to import data saved as ascii with CATMAN from the laboratory. ISO-8859-1 encoding is assumed.
-        Warning: Columns in the file with the same name are overwritten, only the last one is added to the object.
-
-        Parameters
-        ----------
-        fh : str
-            File path
-        """
-
-        # Open the requested file.
-        f = codecs.open(fh, 'r', 'ISO-8859-1')
-
-        # Read the header
-        header = list(csv.reader([next(f) for x in range(7)], delimiter='\t'))
-
-        # Read the column headers.
-        next(f)
-        column_head = list(csv.reader([next(f) for x in range(29)], delimiter='\t'))
-
-        # Read the tab separated values.
-        next(f)
-        values = list(csv.reader(f, delimiter='\t'))
-
-        # Get the number of channels
-        n_chan = len(values[0])
-
-        # Create a dictionary.
-        data = {}
-
-        # Build a dictionary with the data using the column header to fetch the dict keys.
-        for i in range(n_chan):
-            channel = np.zeros((len(values), 1))
-            name = column_head[0][i].partition(' ')[0]
-            for j, row in enumerate(values):
-                channel[j] = (float(row[i].replace(',', '.')))
-            data[name] = channel
-
-        # Create object
-        return cls(header, data)
-
-
 def main():
-    # Create a polygon column instance.
-    sp1 = PolygonalColumnSpecimen(thickness=3)
-
-    # Add a center line for the specimen.
-    sp1.add_centre_line([0, 0, 0], [0, 0, 1])
-
-    # Add all sides and edges.
-    # they consist of FlatFace and RoundedEdge instances.
-    sp1.add_all_sides(16, '../../sp1/sp1_side_', fit_planes=True, offset_to_midline=True)
-    sp1.add_all_edges(16, '../../sp1/sp1_edge_', ref_lines=True)
-
-    # Find a series of points for each edge based on the scanned surface.
-    sp1.find_real_edges(offset_to_midline=True)
-
-    #
-    sp1.plot_all()
-    sp1.print_report()
-
-    # Return the specimen
-    return sp1
+    print('Module successfully loaded.')
 
 
 if __name__ == "__main__":

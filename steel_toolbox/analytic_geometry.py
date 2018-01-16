@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-This is the docstring for the analytic_geometry.py module.
-
-The module describes classes and functions relevant to basic analytic geometry.
+Module for basic analytic geometry.
 
 """
 import numpy as np

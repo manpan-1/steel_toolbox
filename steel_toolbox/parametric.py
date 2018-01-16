@@ -26,7 +26,7 @@ def divisors(n):
 
     """
     large_divisors = []
-    for i in xrange(1, int(sqrt(n) + 1)):
+    for i in range(1, int(sqrt(n) + 1)):
         if n % i == 0:
             yield i
             if i * i != n:

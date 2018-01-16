@@ -50,7 +50,7 @@ class TestSteel_toolbox(unittest.TestCase):
             x = np.r_[x]
             y = np.r_[y]
             z = np.r_[z]
-            return st.lab_tools.FlatFace(scanned_data=np.transpose(np.row_stack([x, y, z])))
+            return st.scan_3D.FlatFace(scanned_data=np.transpose(np.row_stack([x, y, z])))
 
         # Create points for the two planes.
         p1 = make_plane_data([1, 0, -4])
