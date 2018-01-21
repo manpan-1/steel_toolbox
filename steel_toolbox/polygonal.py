@@ -14,6 +14,10 @@ from mpl_toolkits.mplot3d import Axes3D
 
 
 class PolygonalColumn(sd.Part):
+    """
+    Polygonal column.
+
+    """
     def __init__(self,
                  geometry=None,
                  cs_props=None,
@@ -32,6 +36,26 @@ class PolygonalColumn(sd.Part):
             material,
             struct_props,
             bc_loads)
+
+    def add_specimen(self, path):
+        # Create a polygon column instance.
+        specimen = PolygSpecimen(thickness=3)
+
+        # Add a center line for the specimen.
+        specimen.add_centre_line([0, 0, 0], [0, 0, 1])
+
+        # Add all sides and edges.
+        # they consist of FlatFace and RoundedEdge instances.
+        specimen.add_all_sides(16, path + 'side_', fit_planes=True, offset_to_midline=True)
+        specimen.add_all_edges(16, path + 'edge_', ref_lines=True)
+
+        # Find a series of points for each edge based on the scanned surface.
+        specimen.find_real_edges(offset_to_midline=True)
+        self.specimen = specimen
+
+    def add_test(self, fh):
+        self.lab_test = PolygTest.from_file(fh)
+
 
     @classmethod
     def from_geometry(
@@ -210,25 +234,6 @@ class PolygonalColumn(sd.Part):
 
         return geometry, cs_props, material, struct_props
 
-    def add_specimen(self, path):
-        # Create a polygon column instance.
-        sp1 = PolygSpecimen(thickness=3)
-
-        # Add a center line for the specimen.
-        sp1.add_centre_line([0, 0, 0], [0, 0, 1])
-
-        # Add all sides and edges.
-        # they consist of FlatFace and RoundedEdge instances.
-        sp1.add_all_sides(16, path + 'side_', fit_planes=True, offset_to_midline=True)
-        sp1.add_all_edges(16, path + 'edge_', ref_lines=True)
-
-        # Find a series of points for each edge based on the scanned surface.
-        sp1.find_real_edges(offset_to_midline=True)
-        self.specimen = sp1
-
-    def add_test(self, fh):
-        self.lab_test = PolygTest.from_file(fh)
-
 
 class PolygSpecimen:
     """
@@ -276,7 +281,7 @@ class PolygSpecimen:
         Multiple FlatFace instances are created as sides of the polygonal column. A series of files containing scanned
         data points must be given. The files should be on the same path and have a filename structure as:
         `path/basenameXX.pkl`, where XX is an id number in ascending order starting from 01.
-        Only the `path/filename` is given as input to this method.
+        Only the `path/basename` is given as input to this method.
 
         :param n_sides:
         :param prefix:
@@ -576,12 +581,12 @@ def semi_closed_polygon(n_sides, radius, t, tg, rbend, nbend, l_lip):
 
 
 def main():
-    # First specimen
+    # Create a polygonal column object.
     number_of_sides = 16
     plate_classification = 30.
     thickness = 3.
     specimen_height = 700.
-    yielt_stress = 700.
+    yield_stress = 700.
     fabrication_class = 'fcA'
 
     sp1 = PolygonalColumn.from_slenderness_and_thickness(
@@ -589,7 +594,7 @@ def main():
         plate_classification,
         thickness,
         specimen_height,
-        yielt_stress,
+        yield_stress,
         fabrication_class
     )
 
@@ -611,11 +616,13 @@ def main():
         plate_classification,
         thickness,
         specimen_height,
-        yielt_stress,
+        yield_stress,
         fabrication_class
     )
 
     sp2.add_test('../data/experiments/sample_2_all_data_appended.asc')
+
+    sp2.add_specimen('../../sp2/')
 
     number_of_sides = 16
     plate_classification = 50.
@@ -626,7 +633,7 @@ def main():
         plate_classification,
         thickness,
         specimen_height,
-        yielt_stress,
+        yield_stress,
         fabrication_class
     )
 
@@ -641,7 +648,7 @@ def main():
         plate_classification,
         thickness,
         specimen_height,
-        yielt_stress,
+        yield_stress,
         fabrication_class
     )
 
@@ -656,7 +663,7 @@ def main():
         plate_classification,
         thickness,
         specimen_height,
-        yielt_stress,
+        yield_stress,
         fabrication_class
     )
 
@@ -671,7 +678,7 @@ def main():
         plate_classification,
         thickness,
         specimen_height,
-        yielt_stress,
+        yield_stress,
         fabrication_class
     )
 
@@ -686,7 +693,7 @@ def main():
         plate_classification,
         thickness,
         specimen_height,
-        yielt_stress,
+        yield_stress,
         fabrication_class
     )
 
@@ -701,7 +708,7 @@ def main():
         plate_classification,
         thickness,
         specimen_height,
-        yielt_stress,
+        yield_stress,
         fabrication_class
     )
 
@@ -716,7 +723,7 @@ def main():
         plate_classification,
         thickness,
         specimen_height,
-        yielt_stress,
+        yield_stress,
         fabrication_class
     )
 

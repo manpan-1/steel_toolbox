@@ -324,7 +324,7 @@ class RoundedEdge(Scan3D):
         """
         Intersect scanned points with a surface between the reference line and a given line.
 
-        This function is used to calculate the real edge based on the scanned rounded corner. Circles are fitted on the
+        This function is used to find points on the scanned rounded corner. Circles are fitted on the
         scanned points on different positions. Then the circles are intersected with the line passing through the
         reference line of the edge and another given line (e.g. the centre of the column). A list of points is
         generated which represent the real edge of rounded corner.
@@ -334,12 +334,28 @@ class RoundedEdge(Scan3D):
         """
         if isinstance(other, ag.Line3D):
             self.edge_points = []
-            for x in self.circles:
-                z_current = x.points[0][0]
+            # Loop through the circles that represent the edge roundness at different heights.
+            for circle in self.circles:
+                # Get the z-coordinate (height) of the current point
+                z_current = circle.points[0][0]
+
+                # Get the x-y coordinates of the edge reference line and the mid-line for the given height, z.
                 ref_line_point = self.ref_line.xy_for_z(z_current)
                 other_line_point = other.xy_for_z(z_current)
+
+                # Create a temporary line object from the two points.
                 intersection_line = ag.Line2D.from_2_points(ref_line_point[:2], other_line_point[:2])
-                line_circle_intersection = x.intersect_with_line(intersection_line)
+
+                # Intersect this temporary with the current circle.
+                line_circle_intersection = circle.intersect_with_line(intersection_line)
+
+                # If the line does not intersect with the current circle, print on screen and continue.
+                if line_circle_intersection is None:
+                    print("Line and circle at height {} do not intersect. Point ignored.".format(z_current))
+                    return
+
+                # If the line intersects with the circle, select the outermost of the two intersection points
+
                 if np.linalg.norm(line_circle_intersection[0]) > np.linalg.norm(line_circle_intersection[1]):
                     outer = line_circle_intersection[0]
                 else:

@@ -158,17 +158,28 @@ class Circle2D:
             xc, yc = self.centre
             radius = self.radius
 
+            # Terms of the quadratic equation for the line-circle intersection.
             alfa = 1 + (a / b)**2
-            beta = 2 * (a * c / b**2 - xc + a * yc / b)
-            gama = xc**2 + yc**2 - radius**2 + 2 * c * yc / b
+            beta = 2 * (c * a / b**2 + yc * a / b - xc)
+            gama = xc**2 + yc**2 - radius**2 + (c / b)**2 + 2 * c * yc / b
 
+            # Solution
             x_intersect = solve_quadratic(alfa, beta, gama)
-            y_intersect = np.r_[-(c + a * x_intersect[0]) / b, -(c + a * x_intersect[1]) / b]
 
-            point1 = np.r_[x_intersect[0], y_intersect[0]]
-            point2 = np.r_[x_intersect[1], y_intersect[1]]
-            return [point1, point2]
+            # If no intersection, exit and return None
+            if x_intersect is None:
+                print("The line does not intersect with the circle")
+                return
+            else:
+                # Calculate y.
+                y_intersect = np.r_[-(c + a * x_intersect[0]) / b, -(c + a * x_intersect[1]) / b]
+
+                # Points.
+                point1 = np.r_[x_intersect[0], y_intersect[0]]
+                point2 = np.r_[x_intersect[1], y_intersect[1]]
+                return [point1, point2]
         else:
+            print("Object of type 'Line2D' is expected")
             NotImplemented
 
     def plot_circle(self):
@@ -823,11 +834,9 @@ def solve_quadratic(a, b, c):
 
     if d < 0:
         print('No real solutions.')
-        x1 = None
-        x2 = None
+        return
     else:
         # find two solutions
         x1 = (-b - np.sqrt(d)) / (2 * a)
         x2 = (-b + np.sqrt(d)) / (2 * a)
-
-    return [x1, x2]
+        return [x1, x2]

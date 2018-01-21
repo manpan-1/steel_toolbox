@@ -6,29 +6,29 @@ numpydoc formatting is followed.
 
 .. automodule:: steel_toolbox
 
-en_tools module: Eurocode calculations
-======================================
-.. automodule:: en_tools
+polygonal.py module: Framework for the study on polygonal profiles
+==================================================================
+.. automodule:: polygonal
    :members:
 
-abq_tools module: Tools for Abaqus cae
-======================================
-.. automodule:: abq_tools
+steel_design.py module: Tools for structural steel design
+=========================================================
+.. automodule:: steel_design
    :members:
 
-parametric_tools: Manage parametric jobs
-========================================
-.. automodule:: parametric_tools
+parametric: Manage parametric jobs
+==================================
+.. automodule:: parametric
    :members:
 
-steel_tools: Tools for steel design
-===================================
-.. automodule:: steel_tools
+lab_tests: Laboratory testing
+=============================
+.. automodule:: lab_test
    :members:
 
-lab_tools: Tools related to laboratory work
-===========================================
-.. automodule:: lab_tools
+scan_3D: Tools for 3d scanning
+==============================
+.. automodule:: scan_3D
    :members:
 
 analytic_geometry: Basic Cartesian geometry
