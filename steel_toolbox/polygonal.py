@@ -135,7 +135,7 @@ class PolygonalColumn:
         self.real_specimen = specimen
 
     def add_experiment_data(self, fh):
-        self.experiment_data = Test.from_file(fh)
+        self.experiment_data = TestData.from_file(fh)
 
 
 class TheoreticalSpecimen(sd.Part):
@@ -177,6 +177,8 @@ class TheoreticalSpecimen(sd.Part):
             fab_class
         )
 
+        geometry.r_circle = r_circle
+
         return cls(geometry, cs_props, material, struct_props)
 
     @classmethod
@@ -205,6 +207,8 @@ class TheoreticalSpecimen(sd.Part):
             f_yield,
             fab_class
         )
+
+        geometry.r_circle = r_circle
 
         # Return radius of the cylinder of equal perimeter
         return cls(geometry, cs_props, material, struct_props)
@@ -236,6 +240,8 @@ class TheoreticalSpecimen(sd.Part):
             f_yield,
             fab_class
         )
+
+        geometry.r_circle = r_circle
 
         # Return radius of the cylinder of equal perimeter
         return cls(geometry, cs_props, material, struct_props)
@@ -467,6 +473,7 @@ class RealSpecimen:
         Axes3D(fig1)
         for i in range(-len(self.sides), 0):
             self.sides[i].plot_face(reduced=0.003, fig=fig1)
+        for i in range(-len(self.edges), 0):
             self.edges[i].ref_line.plot_line(fig=fig1, ends=[min_z, max_z])
 
     def print_report(self):
@@ -491,7 +498,7 @@ class RealSpecimen:
             print('')
 
 
-class Test(lt.Experiment):
+class TestData(lt.Experiment):
     def __init__(self, header, data):
         super().__init__(header, data)
 
@@ -682,154 +689,32 @@ def semi_closed_polygon(n_sides, radius, t, tg, rbend, nbend, l_lip):
 
 def main():
     # Create a polygonal column object.
-    number_of_sides = 16
-    plate_classification = 30.
-    thickness = 3.
-    specimen_height = 700.
-    yield_stress = 700.
-    fabrication_class = 'fcA'
+    length = 700.
+    f_yield = 700.
+    fab_class = 'fcA'
 
-    sp1 = PolygonalColumn.from_slenderness_and_thickness(
-        number_of_sides,
-        plate_classification,
-        thickness,
-        specimen_height,
-        yield_stress,
-        fabrication_class
-    )
+    n_sides = 16
 
-    # Add data from the real specimen.
-    # The data come from 3D scanning the fabricated specimen before performing the test.
+    sp1 = PolygonalColumn()
+    sp1.add_theoretical_specimen(n_sides, length, f_yield, fab_class, thickness=3., p_class=30.)
     sp1.add_real_specimen('../../sp1/')
-
-    # Add the data recorded during the test
     sp1.add_experiment_data('../data/experiments/sample_1.asc')
 
-    # Similarly for the other 8 specimens
-
-    number_of_sides = 16
-    plate_classification = 40.
-    thickness = 3.
-
-    sp2 = PolygonalColumn.from_slenderness_and_thickness(
-        number_of_sides,
-        plate_classification,
-        thickness,
-        specimen_height,
-        yield_stress,
-        fabrication_class
-    )
-
+    sp2 = PolygonalColumn()
+    sp2.add_theoretical_specimen(n_sides, length, f_yield, fab_class, thickness=3., p_class=40.)
+    sp2.add_real_specimen('../../sp2/')
     sp2.add_experiment_data('../data/experiments/sample_2_all_data_appended.asc')
 
-    sp2.add_real_specimen('../../sp2/')
-
-    number_of_sides = 16
-    plate_classification = 50.
-    thickness = 3.
-
-    sp3 = PolygonalColumn.from_slenderness_and_thickness(
-        number_of_sides,
-        plate_classification,
-        thickness,
-        specimen_height,
-        yield_stress,
-        fabrication_class
-    )
-
+    sp3 = PolygonalColumn()
+    sp3.add_theoretical_specimen(n_sides, length, f_yield, fab_class, thickness=3., p_class=50.)
+    sp3.add_real_specimen('../../sp3/')
     sp3.add_experiment_data('../data/experiments/sample_3_realtest.asc')
 
-    sp3.add_real_specimen('../../sp3/')
+    n_sides = 20
 
-    number_of_sides = 20
-    plate_classification = 30.
-    thickness = 3.
-
-    sp4 = PolygonalColumn.from_slenderness_and_thickness(
-        number_of_sides,
-        plate_classification,
-        thickness,
-        specimen_height,
-        yield_stress,
-        fabrication_class
-    )
-
+    sp4 = PolygonalColumn()
+    sp4.add_theoretical_specimen(n_sides, length, f_yield, fab_class, thickness=3., p_class=30.)
+    sp4.add_real_specimen('../../')
     sp4.add_experiment_data('../data/experiments/sample_4_realtest.asc')
 
-    number_of_sides = 20
-    plate_classification = 40.
-    thickness = 3.
-
-    sp5 = PolygonalColumn.from_slenderness_and_thickness(
-        number_of_sides,
-        plate_classification,
-        thickness,
-        specimen_height,
-        yield_stress,
-        fabrication_class
-    )
-
-    sp5.add_experiment_data('../data/experiments/sample_5_realtest.asc')
-
-    number_of_sides = 20
-    plate_classification = 50.
-    thickness = 2.
-
-    sp6 = PolygonalColumn.from_slenderness_and_thickness(
-        number_of_sides,
-        plate_classification,
-        thickness,
-        specimen_height,
-        yield_stress,
-        fabrication_class
-    )
-
-    sp6.add_experiment_data('../data/experiments/sample_6_realtest.asc')
-
-    number_of_sides = 24
-    plate_classification = 30.
-    thickness = 3.
-
-    sp7 = PolygonalColumn.from_slenderness_and_thickness(
-        number_of_sides,
-        plate_classification,
-        thickness,
-        specimen_height,
-        yield_stress,
-        fabrication_class
-    )
-
-    sp7.add_experiment_data('../data/experiments/sample_7_realtest.asc')
-
-    number_of_sides = 24
-    plate_classification = 40.
-    thickness = 2.
-
-    sp8 = PolygonalColumn.from_slenderness_and_thickness(
-        number_of_sides,
-        plate_classification,
-        thickness,
-        specimen_height,
-        yield_stress,
-        fabrication_class
-    )
-
-    sp8.add_experiment_data('../data/experiments/sample_8_realtest.asc')
-
-    number_of_sides = 24
-    plate_classification = 50.
-    thickness = 2.
-
-    sp9 = PolygonalColumn.from_slenderness_and_thickness(
-        number_of_sides,
-        plate_classification,
-        thickness,
-        specimen_height,
-        yield_stress,
-        fabrication_class
-    )
-
-    sp9.add_experiment_data('../data/experiments/sample_9_realtest.asc')
-
-    # Return all the specimens
-    return [sp1, sp2, sp3, sp4, sp5, sp6, sp7, sp8, sp9]
+    return [sp1, sp2, sp3, sp4]

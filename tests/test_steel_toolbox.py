@@ -26,12 +26,12 @@ class TestSteel_toolbox(unittest.TestCase):
         """Tear down test fixtures, if any."""
 
     def test_000_something(self):
-        """Test something."""
+        """TestData something."""
 
         # The following code is used to cross-check the validity of the results. Points for 2 planes are created and used
         # for testing the fitting and plotting methods.
 
-        # Test xyz data from randomised z=1x+2y+3 for x,y values from -10 t0 +10
+        # TestData xyz data from randomised z=1x+2y+3 for x,y values from -10 t0 +10
         def f_3(beta, xy):
             """ implicit definition of the plane"""
             return beta[0] * xy[0] + beta[1] * xy[1] + beta[2]
@@ -69,7 +69,7 @@ class TestSteel_toolbox(unittest.TestCase):
         lp12.plot_line(fig=fig2, ends=[-10, 10])
 
     def test_command_line_interface(self):
-        """Test the CLI."""
+        """TestData the CLI."""
         runner = CliRunner()
         result = runner.invoke(cli.main)
         assert result.exit_code == 0
