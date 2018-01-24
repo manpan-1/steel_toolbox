@@ -22,9 +22,10 @@ class Geometry:
         Member's length.
     """
 
-    def __init__(self, cs_sketch, length):
+    def __init__(self, cs_sketch, length, thickness):
         self.cs_sketch = cs_sketch
         self.length = length
+        self.thickness = thickness
 
 
 class CsSketch:

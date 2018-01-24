@@ -220,6 +220,13 @@ class FlatFace(Scan3D):
         super().__init__(scanned_data)
 
     def fit_plane(self):
+        """
+        Fit a plane on the scanned data.
+
+        The Plane3D object is assigned in the `self.ref_plane`. The fitted plane is returned using the
+        analytic_geometry.lstsq_planar_fit with the optional argument lay_on_xy=True. See
+        analytic_geometry.lstsq_planar_fit documentation.
+        """
         self.ref_plane = ag.Plane3D.from_fitting(self.scanned_data, lay_on_xy=True)
 
     def offset_face(self, offset, offset_points=False):
@@ -238,7 +245,7 @@ class FlatFace(Scan3D):
             point_list = [p + self.ref_plane.plane_coeff[:3] * offset for p in self.scanned_data]
             self.scanned_data = np.array(point_list)
 
-    def plot_xy_bounded(self, fig=None, reduced=None):
+    def plot_face(self, fig=None, reduced=None):
         """
         Surface plotter.
 

@@ -123,10 +123,10 @@ class Plane3D:
 
         See Also
         --------
-        planar_fit : fit plane on data
+        lstsq_planar_fit : fit plane on data
 
         """
-        plane_coeff = planar_fit(points, lay_on_xy=lay_on_xy)
+        plane_coeff = lstsq_planar_fit(points, lay_on_xy=lay_on_xy)
         return cls(plane_coeff=plane_coeff)
 
 
@@ -518,7 +518,7 @@ def lstsq(points):
     return np.r_[c[0], c[1], -1, c[2]] / (np.linalg.norm([c[0], c[1], -1]) * np.sign(c[2]))
 
 
-def planar_fit(points, lay_on_xy=False):
+def lstsq_planar_fit(points, lay_on_xy=False):
     """
     Fit a plane to 3d points.
 
@@ -657,7 +657,7 @@ def odr_planar_fit(points, rand_3_estimate=False):
         d_0 = u_1[0] * r_point_1[0] + u_1[1] * r_point_1[1] + u_1[2] * r_point_1[2]
         beta0 = np.r_[u_1[0], u_1[1], u_1[2], d_0]
     else:
-        beta0 = planar_fit(points)
+        beta0 = lstsq_planar_fit(points)
 
     # Create the data object for the odr. The equation is given in the implicit form 'a*x + b*y + c*z + d = 0' and
     # beta=[a, b, c, d] (beta is the vector to be fitted). The positional argument y=1 means that the dimensionality

@@ -64,8 +64,8 @@ class TestSteel_toolbox(unittest.TestCase):
         # Plot the results.
         fig2 = plt.figure()
         Axes3D(fig2)
-        p1.plot_xy_bounded(fig=fig2)
-        p2.plot_xy_bounded(fig=fig2)
+        p1.plot_face(fig=fig2)
+        p2.plot_face(fig=fig2)
         lp12.plot_line(fig=fig2, ends=[-10, 10])
 
     def test_command_line_interface(self):

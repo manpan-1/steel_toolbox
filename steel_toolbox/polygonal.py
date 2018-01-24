@@ -4,6 +4,7 @@
 A framework for the study of polygonal profiles.
 
 """
+import os
 import numpy as np
 import steel_toolbox.steel_design as sd
 import steel_toolbox.lab_tests as lt
@@ -13,22 +14,142 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 
-class PolygonalColumn(sd.Part):
+class PolygonalColumn:
     """
     Polygonal column.
 
     """
+    def __init__(self, theoretical_specimen=None, real_specimen=None, experiment_data=None):
+
+        self.theoretical_specimen = theoretical_specimen
+        self.real_specimen = real_specimen
+        self.experiment_data = experiment_data
+
+    def add_theoretical_specimen(self, n_sides, length, f_yield, fab_class, r_circle=None, p_class=None, thickness=None):
+        if [i == None for i in [r_circle, p_class, thickness]].count(True) > 1:
+            print('Not enough info. Two out of the three optional arguments {r_circle, p_class, thickness} must be given.')
+            return
+        else:
+            if p_class is None:
+                self.theoretical_specimen = TheoreticalSpecimen.from_geometry(
+                    n_sides,
+                    r_circle,
+                    thickness,
+                    length,
+                    f_yield,
+                    fab_class
+                )
+            elif r_circle is None:
+                self.theoretical_specimen = TheoreticalSpecimen.from_slenderness_and_thickness(
+                    n_sides,
+                    p_class,
+                    thickness,
+                    length,
+                    f_yield,
+                    fab_class
+                )
+            else:
+                self.theoretical_specimen = TheoreticalSpecimen.from_slenderness_and_radius(
+                    n_sides,
+                    r_circle,
+                    p_class,
+                    length,
+                    f_yield,
+                    fab_class
+                )
+
+    def add_real_specimen(self, path):
+        """
+        Add data from scanning pickle file.
+
+        Adds a self.specimen object of the RealSpecimen class. Scanned data are loaded from a list of pickle files
+        corresponding to sides and edges, each file containing point coordinates. The pickle files are assumed to follow
+        the the filename structure:
+
+        files with points of sides: `side_XX.pkl`
+        files iwth points od edges: `edge_XX.pkl`
+        where `XX` is an ascending number starting from 01.
+
+        Parameters
+        ----------
+        path : str
+            Path containing side_XX.pkl and edge_XX.pkl files. eg `/home/user/` (terminating backslash required).
+
+        """
+        # Scan the given path for filenames.
+        file_list = os.listdir(path)
+
+        n_sides, n_edges = 0, 0
+        side_filename_numbers, edge_filename_numbers = [], []
+        for fname in file_list:
+            if fname[-4:] == '.pkl':
+                if fname[:5] == 'side_':
+                    n_sides = n_sides + 1
+                    side_filename_numbers.append(int(fname[5:7]))
+                if fname[:5] == 'edge_':
+                    n_edges = n_edges + 1
+                    edge_filename_numbers.append(int(fname[5:7]))
+
+        if n_sides == 0 and n_edges == 0:
+            print('No side or edge files were found in the directory.')
+            NotImplemented
+            return
+
+        # Sort the numbers fetched from the filenames and check if they are sequential or if there are numbers missing.
+        side_filename_numbers.sort()
+        edge_filename_numbers.sort()
+        if not all([x == num - 1 for x, num in enumerate(side_filename_numbers)] + [x == num - 1 for x, num in enumerate(edge_filename_numbers)]):
+            print("Problem with filenames. Check if the filenames are correct (see method's documentation) ant the "
+                  "numbering in the filenames is sequential (no sides or edges missing)")
+            NotImplemented
+            return
+
+        # Create a polygon specimen object.
+        if self.theoretical_specimen is None:
+            print('No theoretical specimen defined. Before adding data of the real scanned specimen, it is necessary '
+                  'to create the corresponding theoretical specimen.')
+            return
+        else:
+            specimen = RealSpecimen(thickness=self.theoretical_specimen.geometry.thickness)
+
+        # Add a center line for the specimen.
+        # TODO: add real centreline from file.
+        specimen.add_centre_line([0, 0, 0], [0, 0, 1])
+
+        # Add all sides and edges.
+        # they consist of FlatFace and RoundedEdge instances.
+        specimen.add_all_sides(n_sides, path + 'side_', fit_planes=True, offset_to_midline=True)
+
+        # Check if the existing edges found in the directory correspond one by one to the sides. If so, then the
+        # intersection lines of adjacent sides are calculated and added to the edges as reference lines. Otherwise, the
+        # edges are imported from whatever files are found and no reference lines are calculated.
+        if side_filename_numbers == edge_filename_numbers:
+            ref_lines = True
+        else:
+            ref_lines = False
+
+        specimen.add_all_edges(n_edges, path + 'edge_', ref_lines=ref_lines)
+
+        # Find a series of points for each edge based on the scanned surface.
+        specimen.find_real_edges(offset_to_midline=True)
+        self.real_specimen = specimen
+
+    def add_experiment_data(self, fh):
+        self.experiment_data = Test.from_file(fh)
+
+
+class TheoreticalSpecimen(sd.Part):
+    """
+    Properties and calculations of a theoretical (ideal geometry) polygonal column.
+
+    """
+
     def __init__(self,
                  geometry=None,
                  cs_props=None,
                  material=None,
                  struct_props=None,
-                 bc_loads=None,
-                 specimen=None,
-                 lab_test=None):
-
-        self.specimen = specimen
-        self.lab_test = lab_test
+                 bc_loads=None):
 
         super().__init__(
             geometry,
@@ -36,26 +157,6 @@ class PolygonalColumn(sd.Part):
             material,
             struct_props,
             bc_loads)
-
-    def add_specimen(self, path):
-        # Create a polygon column instance.
-        specimen = PolygSpecimen(thickness=3)
-
-        # Add a center line for the specimen.
-        specimen.add_centre_line([0, 0, 0], [0, 0, 1])
-
-        # Add all sides and edges.
-        # they consist of FlatFace and RoundedEdge instances.
-        specimen.add_all_sides(16, path + 'side_', fit_planes=True, offset_to_midline=True)
-        specimen.add_all_edges(16, path + 'edge_', ref_lines=True)
-
-        # Find a series of points for each edge based on the scanned surface.
-        specimen.find_real_edges(offset_to_midline=True)
-        self.specimen = specimen
-
-    def add_test(self, fh):
-        self.lab_test = PolygTest.from_file(fh)
-
 
     @classmethod
     def from_geometry(
@@ -67,7 +168,7 @@ class PolygonalColumn(sd.Part):
             f_yield,
             fab_class
     ):
-        geometry, cs_props, material, struct_props = PolygonalColumn.calc_properties(
+        geometry, cs_props, material, struct_props = TheoreticalSpecimen.calc_properties(
             n_sides,
             r_circle,
             thickness,
@@ -96,7 +197,7 @@ class PolygonalColumn(sd.Part):
         # Radius of the equal perimeter cylinder
         r_circle = n_sides * thickness * epsilon * p_classification / (2 * np.pi)
 
-        geometry, cs_props, material, struct_props = PolygonalColumn.calc_properties(
+        geometry, cs_props, material, struct_props = TheoreticalSpecimen.calc_properties(
             n_sides,
             r_circle,
             thickness,
@@ -127,7 +228,7 @@ class PolygonalColumn(sd.Part):
         # Calculate the thickness
         thickness = 2 * np.pi * r_circle / (n_sides * epsilon * p_classification)
 
-        geometry, cs_props, material, struct_props = PolygonalColumn.calc_properties(
+        geometry, cs_props, material, struct_props = TheoreticalSpecimen.calc_properties(
             n_sides,
             r_circle,
             thickness,
@@ -181,7 +282,7 @@ class PolygonalColumn(sd.Part):
         ]
 
         cs_sketch = sd.CsSketch(nodes, elem)
-        geometry = sd.Geometry(cs_sketch, length)
+        geometry = sd.Geometry(cs_sketch, length, thickness)
         cs_props = sd.CsProps.from_cs_sketch(cs_sketch)
         cs_props.max_dist = r_circum
         cs_props.min_dist = np.sqrt(r_circum ** 2 - (side_width / 2) ** 2)
@@ -235,7 +336,7 @@ class PolygonalColumn(sd.Part):
         return geometry, cs_props, material, struct_props
 
 
-class PolygSpecimen:
+class RealSpecimen:
     """
     A column specimen of polygonal cross-section.
 
@@ -274,7 +375,7 @@ class PolygSpecimen:
         """
         self.sides.append(s3d.FlatFace.from_pickle(filename))
 
-    def add_all_sides(self, n_sides, prefix, fit_planes=None, offset_to_midline=False):
+    def add_all_sides(self, n_sides, prefix, fit_planes=False, offset_to_midline=False):
         """
         Add multiple sides.
 
@@ -288,8 +389,6 @@ class PolygSpecimen:
         :param fit_planes:
         :return:
         """
-        if fit_planes is None:
-            fit_planes = False
 
         self.sides = [s3d.FlatFace.from_pickle(prefix + '{:02d}.pkl'.format(x)) for x in range(1, n_sides + 1)]
 
@@ -367,7 +466,7 @@ class PolygSpecimen:
         fig1 = plt.figure()
         Axes3D(fig1)
         for i in range(-len(self.sides), 0):
-            self.sides[i].plot_xy_bounded(reduced=0.003, fig=fig1)
+            self.sides[i].plot_face(reduced=0.003, fig=fig1)
             self.edges[i].ref_line.plot_line(fig=fig1, ends=[min_z, max_z])
 
     def print_report(self):
@@ -392,7 +491,7 @@ class PolygSpecimen:
             print('')
 
 
-class PolygTest(lt.Experiment):
+class Test(lt.Experiment):
     def __init__(self, header, data):
         super().__init__(header, data)
 
@@ -436,6 +535,7 @@ class PolygTest(lt.Experiment):
 
         # Return
         return ecc
+
 
 
 def semi_closed_polygon(n_sides, radius, t, tg, rbend, nbend, l_lip):
@@ -600,10 +700,10 @@ def main():
 
     # Add data from the real specimen.
     # The data come from 3D scanning the fabricated specimen before performing the test.
-    sp1.add_specimen('../../sp1/')
+    sp1.add_real_specimen('../../sp1/')
 
     # Add the data recorded during the test
-    sp1.add_test('../data/experiments/sample_1.asc')
+    sp1.add_experiment_data('../data/experiments/sample_1.asc')
 
     # Similarly for the other 8 specimens
 
@@ -620,9 +720,9 @@ def main():
         fabrication_class
     )
 
-    sp2.add_test('../data/experiments/sample_2_all_data_appended.asc')
+    sp2.add_experiment_data('../data/experiments/sample_2_all_data_appended.asc')
 
-    sp2.add_specimen('../../sp2/')
+    sp2.add_real_specimen('../../sp2/')
 
     number_of_sides = 16
     plate_classification = 50.
@@ -637,7 +737,9 @@ def main():
         fabrication_class
     )
 
-    sp3.add_test('../data/experiments/sample_3_realtest.asc')
+    sp3.add_experiment_data('../data/experiments/sample_3_realtest.asc')
+
+    sp3.add_real_specimen('../../sp3/')
 
     number_of_sides = 20
     plate_classification = 30.
@@ -652,7 +754,7 @@ def main():
         fabrication_class
     )
 
-    sp4.add_test('../data/experiments/sample_4_realtest.asc')
+    sp4.add_experiment_data('../data/experiments/sample_4_realtest.asc')
 
     number_of_sides = 20
     plate_classification = 40.
@@ -667,7 +769,7 @@ def main():
         fabrication_class
     )
 
-    sp5.add_test('../data/experiments/sample_5_realtest.asc')
+    sp5.add_experiment_data('../data/experiments/sample_5_realtest.asc')
 
     number_of_sides = 20
     plate_classification = 50.
@@ -682,7 +784,7 @@ def main():
         fabrication_class
     )
 
-    sp6.add_test('../data/experiments/sample_6_realtest.asc')
+    sp6.add_experiment_data('../data/experiments/sample_6_realtest.asc')
 
     number_of_sides = 24
     plate_classification = 30.
@@ -697,7 +799,7 @@ def main():
         fabrication_class
     )
 
-    sp7.add_test('../data/experiments/sample_7_realtest.asc')
+    sp7.add_experiment_data('../data/experiments/sample_7_realtest.asc')
 
     number_of_sides = 24
     plate_classification = 40.
@@ -712,7 +814,7 @@ def main():
         fabrication_class
     )
 
-    sp8.add_test('../data/experiments/sample_8_realtest.asc')
+    sp8.add_experiment_data('../data/experiments/sample_8_realtest.asc')
 
     number_of_sides = 24
     plate_classification = 50.
@@ -727,7 +829,7 @@ def main():
         fabrication_class
     )
 
-    sp9.add_test('../data/experiments/sample_9_realtest.asc')
+    sp9.add_experiment_data('../data/experiments/sample_9_realtest.asc')
 
     # Return all the specimens
     return [sp1, sp2, sp3, sp4, sp5, sp6, sp7, sp8, sp9]
