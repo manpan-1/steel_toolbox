@@ -12,7 +12,7 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 requirements = [
-    'Click>=6.0', 'numpy', 'stl', 'matplotlib', 'scipy',
+    'Click>=6.0', 'numpy', 'numpy-stl', 'matplotlib', 'scipy',
     # TODO: put package requirements here
 ]
 
@@ -27,7 +27,7 @@ test_requirements = [
 setup(
     name='steel_toolbox',
     version='0.2.0',
-    description="A collection of classes and tools used on structural steel design.",
+    description="A collection of classes and tools used on structural steel research and design.",
     long_description=readme + '\n\n' + history,
     author="Panagiotis Manoleas",
     author_email='manpan@ltu.se',
@@ -44,13 +44,10 @@ setup(
     zip_safe=False,
     keywords='steel_toolbox',
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
-        'Intended Audience :: Developers',
+        'Development Status :: 1 - Beta',
+        'Intended Audience :: Engineers',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
-        "Programming Language :: Python :: 2",
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
