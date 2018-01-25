@@ -8,6 +8,8 @@ Module with functions related to laboratory work and data acquired with CATMAN.
 import numpy as np
 import csv
 import codecs
+from os.path import basename, splitext
+from matplotlib import pyplot as plt
 
 
 class Experiment:
@@ -18,9 +20,43 @@ class Experiment:
 
     """
 
-    def __init__(self, header, data):
+    def __init__(self, header, channel_header, data, name):
         self.header = header
         self.data = data
+        self.channel_header = channel_header
+        self.data_length = int(header[6][0][9:])
+        self.name = name
+
+    def plot2d(self, x_data, y_data, ax=None):
+        """
+        Plot two recorded channels against each other.
+
+        Parameters
+        ----------
+        x_data : str
+            Key from self.data dictionary for the x-axis.
+        y_data : str
+            Key from self.data dictionary for the y-axis.
+        ax : axis object, optional
+            The axis to be used for plotting. By default, new figure and axis are created.
+
+        """
+
+        if ax is None:
+            fig = plt.figure()
+            plt.plot()
+            ax = fig.axes[0]
+        elif not isinstance(ax, type(plt.axes())):
+            print('Unexpected input type. Input argument `ax` must be of type `matplotlib.pyplot.axes()`')
+            return NotImplemented
+
+        ax.plot(self.data[x_data], self.data[y_data], label=self.name)
+
+        return ax
+
+    def add_new_channel_zeros(self, name):
+        """"Initialise a new channel entry in the dictionary with zeros."""
+        self.data[name] = np.zeros([self.data_length, 1])
 
     @classmethod
     def from_file(cls, fh):
@@ -34,7 +70,10 @@ class Experiment:
         ----------
         fh : str
             File path
+
         """
+        # Name from filename.
+        filename = splitext(basename(fh))[0]
 
         # Open the requested file.
         f = codecs.open(fh, 'r', 'ISO-8859-1')
@@ -65,4 +104,4 @@ class Experiment:
             data[name] = channel
 
         # Create object
-        return cls(header, data)
+        return cls(header, column_head, data, filename)

@@ -11,7 +11,7 @@ def divisors(n):
     """
     Divisors of an integer.
 
-    Return all the possible divisors fo a given integer.
+    Return all the possible divisors for a given integer.
 
     Parameters
     ----------

@@ -135,7 +135,11 @@ class PolygonalColumn:
         self.real_specimen = specimen
 
     def add_experiment_data(self, fh):
+        """Add and post-process data from a test"""
         self.experiment_data = TestData.from_file(fh)
+        self.experiment_data.specimen_length = self.theoretical_specimen.geometry.length
+        self.experiment_data.cs_area = self.theoretical_specimen.cs_props.area
+        self.experiment_data.process_data()
 
 
 class TheoreticalSpecimen(sd.Part):
@@ -499,8 +503,20 @@ class RealSpecimen:
 
 
 class TestData(lt.Experiment):
-    def __init__(self, header, data):
-        super().__init__(header, data)
+    def __init__(self, header, channel_header, data, name, specimen_length=None, cs_area=None):
+        self.specimen_length = specimen_length
+        self.cs_area = cs_area
+
+        super().__init__(header, channel_header, data, name)
+
+    def process_data(self):
+        """
+
+        :return:
+        """
+        self.calc_avg_strain()
+        self.calc_disp_from_strain()
+        self.calc_avg_stress()
 
     def add_eccentricity(self, axis, column, moi, min_dist, thickness, young):
         """
@@ -519,6 +535,121 @@ class TestData(lt.Experiment):
                 min_dist + thickness / 2,
                 young)
             )
+
+    def offset_stroke(self, offset=None):
+        """
+        Offset stroke values.
+
+        Parameters
+        ----------
+        offset : float, optional
+            Distance to offset. By default, the initial displacement (first value) is used, effectively displaceing
+            the values to start from 0.
+
+        """
+        if offset is None:
+            offset = self.data['Stroke'][0]
+
+        self.data['Stroke'] =  self.data['Stroke'] - offset
+
+    def calc_disp_from_strain(self):
+        """Calculate the specimen clear axial deformation based on measured strains"""
+        self.add_new_channel_zeros('disp_clear')
+        self.data['disp_clear'] = self.data['avg_strain'] * self.specimen_length
+
+    def calc_avg_strain(self):
+        """Calculate the average strain from all strain gauges."""
+        # Create new data channel.
+        self.add_new_channel_zeros('avg_strain')
+        i = 0
+        # Collect all strain gauge records.
+        for key in self.data.keys() :
+            if len(key) > 2:
+                if key[:2].isdigit() and (key[2] is 'F') or (key[2] is 'C'):
+                    self.data['avg_strain'] = self.data['avg_strain'] + self.data[key]
+                    i += 1
+
+        self.data['avg_strain'] = self.data['avg_strain'] / (i * 1e6)
+
+    def calc_avg_stress(self):
+        """Calculate the average stress based on the measured reaction force on the load cell and the
+        theoretical area."""
+        # Create new data channel.
+        self.add_new_channel_zeros('avg_stress')
+        self.data['avg_stress'] = self.data['Load'] * 1e3 / self.cs_area
+
+    def plot_stroke_load(self, ax=None):
+        """Load vs stroke curve plotter"""
+        if ax is None:
+            fig = plt.figure()
+            plt.plot()
+            ax = fig.axes[0]
+            self.plot2d('Stroke', 'Load', ax=ax)
+            ax.invert_xaxis()
+            ax.invert_yaxis()
+            handles, labels = ax.get_legend_handles_labels()
+            ax.legend(handles[::-1], labels[::-1])
+            ax.set_xlabel('Displacement, u [mm]')
+            ax.set_ylabel('Reaction, N [kN]')
+            ax.grid()
+
+            return ax
+        elif not isinstance(ax, type(plt.axes())):
+            print('Unexpected input type. Input argument `ax` must be of type `matplotlib.pyplot.axes()`')
+            return NotImplemented
+        else:
+            self.plot2d('Stroke', 'Load', ax=ax)
+            return ax
+
+    def plot_strain_stress(self, ax=None):
+        """Plot average strain vs average stress."""
+        if ax is None:
+            fig = plt.figure()
+            plt.plot()
+            ax = fig.axes[0]
+            self.plot2d('avg_strain', 'avg_stress', ax=ax)
+            ax.invert_xaxis()
+            ax.invert_yaxis()
+            handles, labels = ax.get_legend_handles_labels()
+            ax.legend(handles, labels)
+            ax.set_xlabel('Strain, ε')
+            ax.set_ylabel('Stress, σ [Mpa]')
+            ax.grid()
+
+            return ax
+        elif not isinstance(ax, type(plt.axes())):
+            print('Unexpected input type. Input argument `ax` must be of type `matplotlib.pyplot.axes()`')
+            return NotImplemented
+        else:
+            self.plot2d('avg_strain', 'avg_stress', ax=ax)
+            handles, labels = ax.get_legend_handles_labels()
+            ax.legend(handles, labels)
+            return ax
+
+    def plot_disp_load(self, ax=None):
+        """Plot load vs real displacement."""
+        if ax is None:
+            fig = plt.figure()
+            plt.plot()
+            ax = fig.axes[0]
+            self.plot2d('disp_clear', 'Load', ax=ax)
+            ax.invert_xaxis()
+            ax.invert_yaxis()
+            handles, labels = ax.get_legend_handles_labels()
+            ax.legend(handles[::-1], labels[::-1])
+            ax.set_xlabel('Displacement, u [mm]')
+            ax.set_ylabel('Reaction, N [kN]')
+            ax.grid()
+
+            return ax
+        elif not isinstance(ax, type(plt.axes())):
+            print('Unexpected input type. Input argument `ax` must be of type `matplotlib.pyplot.axes()`')
+            return NotImplemented
+        else:
+            self.plot2d('disp_clear', 'Load', ax=ax)
+            handles, labels = ax.get_legend_handles_labels()
+            ax.legend(handles[::-1], labels[::-1])
+            return ax
 
     @staticmethod
     def eccentricity_from_strain(load, strain, moi, dist, young=None):
@@ -542,7 +673,6 @@ class TestData(lt.Experiment):
 
         # Return
         return ecc
-
 
 
 def semi_closed_polygon(n_sides, radius, t, tg, rbend, nbend, l_lip):
@@ -687,34 +817,58 @@ def semi_closed_polygon(n_sides, radius, t, tg, rbend, nbend, l_lip):
     return [x_cs, y_cs, x_sector, y_sector]
 
 
-def main():
+def main(add_real_specimens=False, add_experimental_data=True, make_plots=True):
     # Create a polygonal column object.
     length = 700.
     f_yield = 700.
     fab_class = 'fcA'
 
-    n_sides = 16
+    cases = [PolygonalColumn() for i in range(9)]
 
-    sp1 = PolygonalColumn()
-    sp1.add_theoretical_specimen(n_sides, length, f_yield, fab_class, thickness=3., p_class=30.)
-    sp1.add_real_specimen('../../sp1/')
-    sp1.add_experiment_data('../data/experiments/sample_1.asc')
+    cases[0].add_theoretical_specimen(16, length, f_yield, fab_class, thickness=3., p_class=30.)
+    cases[1].add_theoretical_specimen(16, length, f_yield, fab_class, thickness=3., p_class=40.)
+    cases[2].add_theoretical_specimen(16, length, f_yield, fab_class, thickness=3., p_class=50.)
+    cases[3].add_theoretical_specimen(20, length, f_yield, fab_class, thickness=3., p_class=30.)
+    cases[4].add_theoretical_specimen(20, length, f_yield, fab_class, thickness=3., p_class=40.)
+    cases[5].add_theoretical_specimen(20, length, f_yield, fab_class, thickness=2., p_class=50.)
+    cases[6].add_theoretical_specimen(24, length, f_yield, fab_class, thickness=3., p_class=30.)
+    cases[7].add_theoretical_specimen(24, length, f_yield, fab_class, thickness=2., p_class=40.)
+    cases[8].add_theoretical_specimen(24, length, f_yield, fab_class, thickness=2., p_class=50.)
 
-    sp2 = PolygonalColumn()
-    sp2.add_theoretical_specimen(n_sides, length, f_yield, fab_class, thickness=3., p_class=40.)
-    sp2.add_real_specimen('../../sp2/')
-    sp2.add_experiment_data('../data/experiments/sample_2_all_data_appended.asc')
+    if add_real_specimens:
+        cases[0].add_real_specimen('data/sp1/')
+        cases[1].add_real_specimen('data/sp2/')
+        cases[2].add_real_specimen('data/sp3/')
+        cases[3].add_real_specimen('data/sp4/')
 
-    sp3 = PolygonalColumn()
-    sp3.add_theoretical_specimen(n_sides, length, f_yield, fab_class, thickness=3., p_class=50.)
-    sp3.add_real_specimen('../../sp3/')
-    sp3.add_experiment_data('../data/experiments/sample_3_realtest.asc')
+    if add_experimental_data:
+        cases[0].add_experiment_data('data/sp1/experiment/sp1.asc')
+        cases[1].add_experiment_data('data/sp2/experiment/sp2.asc')
+        cases[2].add_experiment_data('data/sp3/experiment/sp3.asc')
+        cases[3].add_experiment_data('data/sp4/experiment/sp4.asc')
+        cases[4].add_experiment_data('data/sp5/experiment/sp5.asc')
+        cases[5].add_experiment_data('data/sp6/experiment/sp6.asc')
+        cases[6].add_experiment_data('data/sp7/experiment/sp7.asc')
+        cases[7].add_experiment_data('data/sp8/experiment/sp8.asc')
+        cases[8].add_experiment_data('data/sp9/experiment/sp9.asc')
 
-    n_sides = 20
+        # Correction of stroke tare value on some measurements.
+        cases[1].experiment_data.offset_stroke()
+        cases[3].experiment_data.offset_stroke()
+        cases[4].experiment_data.offset_stroke()
 
-    sp4 = PolygonalColumn()
-    sp4.add_theoretical_specimen(n_sides, length, f_yield, fab_class, thickness=3., p_class=30.)
-    sp4.add_real_specimen('../../')
-    sp4.add_experiment_data('../data/experiments/sample_4_realtest.asc')
+    if make_plots:
+        ax = cases[0].experiment_data.plot_strain_stress()
+        cases[1].experiment_data.plot_strain_stress(ax=ax)
+        cases[2].experiment_data.plot_strain_stress(ax=ax)
 
-    return [sp1, sp2, sp3, sp4]
+        ax = cases[3].experiment_data.plot_strain_stress()
+        cases[4].experiment_data.plot_strain_stress(ax=ax)
+        cases[5].experiment_data.plot_strain_stress(ax=ax)
+
+        ax = cases[6].experiment_data.plot_strain_stress()
+        cases[7].experiment_data.plot_strain_stress(ax=ax)
+        cases[8].experiment_data.plot_strain_stress(ax=ax)
+
+
+    return cases
