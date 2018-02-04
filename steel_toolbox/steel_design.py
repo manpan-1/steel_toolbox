@@ -403,6 +403,8 @@ class Part:
 
 # SIMPLY SUPPORTED PLATE
 
+#TODO: Implement EN50341. Currently the resistance is calculated only for pure compression elements. Add interaction.
+
 def n_pl_rd(
         thickness,
         width,

@@ -11,17 +11,38 @@ from matplotlib import pyplot as plt
 
 
 class Plane3D:
-    """Flat plane in three dimensions."""
+    #TODO: Bullet list items in docstring.
+    """
+    Flat plane in three dimensions.
+
+    A flat plane in the 3 dimensions is expressed in the implicit form, `a*x + b*y + c*z + d = 0`. The vector
+    `v = [a, b, c, d]` is here called 'plane coefficients'. A Plane3D object can be created by setting the plane
+    coefficients directly of by fitting on a set of 3D points using the alternative constructor `from_fitting`.
+
+    Available operations fot a Plane3D object are:
+    --- Offset the plane, `offset_plane`.
+    --- Return the z value for a given xy pair, `z_return`
+    --- Return the intersection line of the plane to a horizontal plane z = z0, `xy_return`
+
+    Parameters
+    ----------
+    plane_coeff : {float, float, float, float}, optional
+        Coefficients of the implicit form of the plane, `a*x + b*y + c*z + d = 0`.
+
+    """
     def __init__(self, plane_coeff=None):
         self.plane_coeff = plane_coeff
 
     def __and__(self, other):
         """
-        Object division returns the intersection line.
+        Ampersand operator returns the intersection line.
+
+        The ampersand operator between two Plane3D objects calculates their intersection, constructs and returns a
+        Line3D object.
 
         Parameters
         ----------
-        other : Plane3D instance
+        other : Plane3D instance.
             The plane to intersect with.
 
         Returns
@@ -56,10 +77,11 @@ class Plane3D:
             return NotImplemented
 
     def offset_plane(self, offset):
+        #TODO: Conclude on the proper way to document input arguments of specific form, e.g. 3by1 array of floats...
         """
-        Offset the plane and (optionally) the scanned data points.
+        Offset the plane.
 
-        Useful for translating translating the scanned surface to the mid line.
+        Useful for translating translating a scanned surface to the mid line by offsetting half the thickness.
 
         Parameters
         ----------
@@ -97,12 +119,15 @@ class Plane3D:
 
     def xy_return(self, z0):
         """
-        Intersect with a z=z0 plane.
+        Intersect with a z = z0 plane.
+
+        The intersection of the plane with a vertical plane z = z0 is calculated and a Line2D object is constructed and
+        returned. Note that the returned Line2D object is unaware of the hight z0 that was used to create it and it is
+        only an expression of x and y.
 
         Parameters
         ----------
-        x : float or numpy.ndarray
-        y : float or numpy.ndarray
+        z0 : float
 
         Returns
         -------
@@ -118,8 +143,16 @@ class Plane3D:
 
     @classmethod
     def from_fitting(cls, points, lay_on_xy=False):
+        #TODO: fix the "array like" the form of the array...
         """
         Create plane object from fitting on points.
+
+        A simple least squares fit is performed on the given points and a Plane2D object is constructes
+
+        Parameters
+        ----------
+        points : [[x0, y0, z0], ..., [xn, yn, zn]] array like
+            The points for which the fitting is performed
 
         See Also
         --------
@@ -341,7 +374,29 @@ class Line3D:
 
 
 class Line2D:
-    """A line in two dimensions"""
+    #TODO: fix list items in docstring.
+    """
+    A line in two dimensions.
+
+    Line objects on the 2 dimensions are expressed by a point and a parallel vector, or/and by the coefficients
+    (a, b, c) of the implicit form `a*x + b*y + c = 0`. There are 3 different ways to create a Line2D object:
+    -- From 2 points,
+    -- from point and parallel vector,
+    -- from the expression coefficients, given as a vector [a, b, c]
+    To create a Line2D object, use one of the three `from_...` class methods.
+
+    Parameters
+    ----------
+    point : ndarray [x0, y0], optional
+        Point belonging to the line. Default is `None`
+
+    parallel : ndarray [v_x, v_y], optional
+        2D vector parallel to the line. Default is `None`
+
+    line_coeff : ndarray [a, b, c], optional
+        Coefficients of the implicit form of the line, `a*x + b*y + c = 0`.
+
+    """
 
     def __init__(self, point=None, parallel=None, line_coeff=None):
         self.point = point
@@ -361,6 +416,7 @@ class Line2D:
         Returns
         -------
         Line2D
+
         """
         # Normalise the given parallel vector
         parallel = unit_vector(np.r_[parallel])
