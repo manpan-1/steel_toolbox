@@ -172,92 +172,35 @@ class TheoreticalSpecimen(sd.Part):
             f_yield,
             fab_class
     ):
-        geometry, cs_props, material, struct_props = TheoreticalSpecimen.calc_properties(
-            n_sides,
-            r_circle,
-            thickness,
-            length,
-            f_yield,
-            fab_class
-        )
+        """
+        Create theoretical polygonal column object for given geometric data.
 
-        geometry.r_circle = r_circle
+        The constructor calculates properties of the polygonal column object (cross-section props,
+        resistance, geometric props etc). The calculated data is then used to construct an object.
 
-        return cls(geometry, cs_props, material, struct_props)
+        Parameters
+        ----------
+        n_sides : int
+            Number of sides of the polygon cross-section.
 
-    @classmethod
-    def from_slenderness_and_thickness(
-            cls,
-            n_sides,
-            p_classification,
-            thickness,
-            length,
-            f_yield,
-            fab_class
-    ):
-        """Calculate radius of a polygon cs for given sides, thickness, plate slenderness and yield strength"""
+        r_circle : float
+            Radius of the circle circumscribed to the polygon.
 
-        # Epsilon for the material
-        epsilon = np.sqrt(235. / f_yield)
+        thickness : float
+            Thickness of the cross-section.
 
-        # Radius of the equal perimeter cylinder
-        r_circle = n_sides * thickness * epsilon * p_classification / (2 * np.pi)
+        length : float
+            Length of the column.
 
-        geometry, cs_props, material, struct_props = TheoreticalSpecimen.calc_properties(
-            n_sides,
-            r_circle,
-            thickness,
-            length,
-            f_yield,
-            fab_class
-        )
+        f_yield : float
+            Yield stress of the material.
 
-        geometry.r_circle = r_circle
+        fab_class : {'fcA', 'fcB', 'fcC'}
+            Fabrication class, as described in EN 1996-1-6. It is used in the calculation of the buckling resistance of
+            the cylinder of equal thickness-perimeter.
 
-        # Return radius of the cylinder of equal perimeter
-        return cls(geometry, cs_props, material, struct_props)
+        """
 
-    @classmethod
-    def from_slenderness_and_radius(
-            cls,
-            n_sides,
-            r_circle,
-            p_classification,
-            length,
-            f_yield,
-            fab_class
-    ):
-        """Calculate the thickness of a polygon cs for given sides, equivalent circle radius, plate slenderness and yield
-        strength"""
-
-        # Epsilon for the material
-        epsilon = np.sqrt(235. / f_yield)
-
-        # Calculate the thickness
-        thickness = 2 * np.pi * r_circle / (n_sides * epsilon * p_classification)
-
-        geometry, cs_props, material, struct_props = TheoreticalSpecimen.calc_properties(
-            n_sides,
-            r_circle,
-            thickness,
-            length,
-            f_yield,
-            fab_class
-        )
-
-        geometry.r_circle = r_circle
-
-        # Return radius of the cylinder of equal perimeter
-        return cls(geometry, cs_props, material, struct_props)
-
-    @staticmethod
-    def calc_properties(
-            n_sides,
-            r_circle,
-            thickness,
-            length,
-            f_yield,
-            fab_class):
         # Create material
         material = sd.Material(210000, 0.3, f_yield)
         epsilon = np.sqrt(235. / f_yield)
@@ -343,7 +286,117 @@ class TheoreticalSpecimen(sd.Part):
             n_b_rd_shell=n_b_rd_shell
         )
 
-        return geometry, cs_props, material, struct_props
+        geometry.r_circle = r_circle
+
+        return cls(geometry, cs_props, material, struct_props)
+
+    @classmethod
+    def from_slenderness_and_thickness(
+            cls,
+            n_sides,
+            p_classification,
+            thickness,
+            length,
+            f_yield,
+            fab_class
+    ):
+
+        """
+        Create theoretical polygonal column object for given number of sides and cross-section slenderness.
+
+        The constructor calculates properties of the polygonal column object (cross-section props,
+        resistance, geometric props etc) which are then used to construct an object.
+
+        Parameters
+        ----------
+        n_sides : int
+            Number of sides of the polygon cross-section.
+
+        p_classification : float
+            Facet slenderness, c/(ε*t).
+
+        thickness : float
+            Thickness of the cross-section.
+
+        length : float
+            Length of the column.
+
+        f_yield : float
+            Yield stress of the material.
+
+        fab_class : {'fcA', 'fcB', 'fcC'}
+            Fabrication class, as described in EN 1996-1-6. It is used in the calculation of the buckling resistance of
+            the cylinder of equal thickness-perimeter.
+
+        """
+
+        # Epsilon for the material
+        epsilon = np.sqrt(235. / f_yield)
+
+        # Radius of the equal perimeter cylinder
+        r_circle = n_sides * thickness * epsilon * p_classification / (2 * np.pi)
+
+        return cls.from_geometry(
+            n_sides,
+            r_circle,
+            thickness,
+            length,
+            f_yield,
+            fab_class
+        )
+
+    @classmethod
+    def from_slenderness_and_radius(
+            cls,
+            n_sides,
+            r_circle,
+            p_classification,
+            length,
+            f_yield,
+            fab_class
+    ):
+        """
+        Create theoretical polygonal column object for given geometric data.
+
+        The constructor calculates properties of the polygonal column object (cross-section props,
+        resistance, geometric props etc). The calculated data is then used to construct an object.
+
+        Parameters
+        ----------
+        n_sides : int
+            Number of sides of the polygon cross-section.
+
+        r_circle : float
+            Radius of the circle circumscribed to the polygon.
+
+        p_classification : float
+            Facet slenderness, c/(ε*t).
+
+        length : float
+            Length of the column.
+
+        f_yield : float
+            Yield stress of the material.
+
+        fab_class : {'fcA', 'fcB', 'fcC'}
+            Fabrication class, as described in EN 1996-1-6. It is used in the calculation of the buckling resistance of
+            the cylinder of equal thickness-perimeter.
+
+        """
+        # Epsilon for the material
+        epsilon = np.sqrt(235. / f_yield)
+
+        # Calculate the thickness
+        thickness = 2 * np.pi * r_circle / (n_sides * epsilon * p_classification)
+
+        return cls.from_geometry(
+            n_sides,
+            r_circle,
+            thickness,
+            length,
+            f_yield,
+            fab_class
+        )
 
 
 class RealSpecimen:
@@ -840,6 +893,7 @@ def main(add_real_specimens=False, add_experimental_data=True, make_plots=True):
         cases[1].add_real_specimen('data/sp2/')
         cases[2].add_real_specimen('data/sp3/')
         cases[3].add_real_specimen('data/sp4/')
+        cases[4].add_real_specimen('data/sp5/')
 
     if add_experimental_data:
         cases[0].add_experiment_data('data/sp1/experiment/sp1.asc')

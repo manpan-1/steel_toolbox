@@ -20,6 +20,7 @@ class Geometry:
         Cross-section sketch.
     length : float
         Member's length.
+
     """
 
     def __init__(self, cs_sketch, length, thickness):
@@ -38,6 +39,7 @@ class CsSketch:
         List of points.
     elem : list
         Element connectivity.
+
     """
 
     def __init__(self, nodes, elem):
@@ -47,7 +49,7 @@ class CsSketch:
 
 class CsProps:
     """
-    Cross-section properties
+    Cross-section properties.
 
     Class for the mass properties of cross-sections. The properties can be calculated using the from_cs_sketch() method.
 
@@ -71,6 +73,7 @@ class CsProps:
         Moment of inertia around the major axis.
     moi_2 : float
         Moment of inertia around the minor axis.
+
     """
 
     def __init__(self,
@@ -249,7 +252,6 @@ class Material:
         self.f_yield = f_yield
         self.plasticity = plasticity
 
-    # TODO change default value to S235
     @staticmethod
     def plastic_table(nominal=None):
         """
@@ -274,7 +276,7 @@ class Material:
 
         """
         if nominal is None:
-            nominal = 'S355'
+            nominal = 'S235'
 
         if nominal is 'S355':
             table = (
@@ -306,7 +308,14 @@ class Material:
     def from_nominal(cls, nominal_strength=None):
 
         """
-        Alternative constructor creating a steel material given of a given nominal strength.
+        Alternative constructor creating a steel material from a given nominal strength.
+
+        Parameters
+        ----------
+
+        nominal_strength : str
+            Steel quality, given in the form of e.g. "S355"
+
         """
         if nominal_strength is None:
             f_yield = 235.
@@ -477,7 +486,7 @@ def plate_class(
     """
     Plate classification.
 
-    Returnes the class for a given plate, according to EN1993-1-1.
+    Returns the class for a given plate, according to EN1993-1-1.
     Currently works for simply supported plates under pure compression.
 
     Parameters
@@ -623,7 +632,7 @@ def sigma_x_rd(
     References
     ----------
     .. [1] Eurocode 3: Design of steel structures - Part 1-6: Strength and stability of shell structures.
-        Brussels: CEN, 2006.
+        Brussels: CEN, 2006._
 
     """
 
