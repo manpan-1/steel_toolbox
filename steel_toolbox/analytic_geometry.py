@@ -147,12 +147,30 @@ class Plane3D:
         """
         Create plane object from fitting on points.
 
-        A simple least squares fit is performed on the given points and a Plane2D object is constructes
+        A simple least squares fit is performed on the given points and a Plane2D object is constructed. Additionally,
+        the points can be rotated to be nearly horizontal and the least squares fitting is performed on the rotated
+        position. The resulted plane is then rotated back to the initial position of the points. This methodology helps
+        when the points are nearly vertical.
 
         Parameters
         ----------
         points : [[x0, y0, z0], ..., [xn, yn, zn]] array like
             The points for which the fitting is performed
+
+        lay_on_xy : bool, optional
+            Perform a single least squares (False) or rotate the points to be nearly horizontal and then perform the
+            least squares fitting (True). Default value is `False`.
+
+        Returns
+        -------
+        Plane3D
+
+        Notes
+        -----
+        When the `lay_on_xy` flag is true, the fitting is no longer a simple least squares and it rather resembles an
+        orthogonal distance regression. The set of given points is rotated based on a least squares on their initial
+        position so when the least squares is performed again, this time on the rotated position, the distances of the
+        points on the z-axis is almost perpendicular to the resulted plane.
 
         See Also
         --------
@@ -164,7 +182,21 @@ class Plane3D:
 
 
 class Circle2D:
-    """A circle in two dimensions."""
+    #TODO: [x,y] floats on the docstring.
+    """
+    A circle in two dimensions.
+
+    A circle is expressed in the form `(x - x0)^2 + (y - y0)^ = r^2` where p = [x0, y0] is the centre and r the radius.
+    A circle2D object can be created either by setting th radius and centre directly or by best fit on a set of given
+    points, using the `from_fitting` class method. The intersection points of the circle with a given line (if any) can
+    be calculated using the `intersect_with_line` method.
+
+    Parameters
+    ----------
+    radius : float, optional
+    centre : [float, float], optional
+
+    """
 
     def __init__(self, radius=None, centre=None):
         self.radius = radius
@@ -172,6 +204,7 @@ class Circle2D:
         self.points = None
 
     def intersect_with_line(self, line):
+        #TODO: what happens if not implementid (no intersection) on docstring.
         """
         Intersect circle with line.
 
@@ -216,7 +249,12 @@ class Circle2D:
             NotImplemented
 
     def plot_circle(self):
-        """Draw data points, best fit circles and center."""
+        """
+        Plot circle
+
+        Points, best fit circle and center are plotted on a new figure.
+
+        """
 
         plt.figure(facecolor='white')  # figsize=(7, 5.4), dpi=72,
         plt.axis('equal')
@@ -252,8 +290,18 @@ class Circle2D:
 
     @classmethod
     def from_fitting(cls, points):
+        #TODO: fix points docstring...
         """
         Create circle object from fitting on points.
+
+        Parameters
+        ----------
+        points : [float, float]
+            Points for which a best-fit circle is sought. The method makes sense for more than 3 points.
+
+        Returns
+        -------
+        Circle2D
 
         See Also
         --------
@@ -267,7 +315,28 @@ class Circle2D:
 
 
 class Line3D:
-    """A line in three dimensions."""
+    #TODO: create xz_for_y and yz_for_x methods, equivalent to xy_for_z AND fix the parameters' docstring
+    """
+    A line in three dimensions.
+
+    A line in the 3 dimensions is expressed by it's direction vector and a point belonging to the line. A Line3D object
+    can be constructed in the following ways:
+    --- From a given point and parallel, `from_point_and_parallel`
+    --- From 2 given points, `from_2_points`
+    --- From 2 points loaded from a pickle file, `from_pickle`
+
+    Parameters
+    ----------
+    point : [float, float, float], optional
+    parallel : [float, float, float], optional
+
+    Notes
+    -----
+    Even though an instance of the class can be created directly by giving a point and a parallel vector directly, it is
+    preferred to use the dedicated class method `from_point_and_parallel` because it automatically normalises the
+    direction vector.
+
+    """
 
     def __init__(self, point=None, parallel=None):
         self.point = point
@@ -276,7 +345,7 @@ class Line3D:
     @classmethod
     def from_point_and_parallel(cls, point, parallel):
         """
-        Create line object from point and parallel.
+        Create line object from a point and a parallel vector.
 
         Parameters
         ----------
@@ -286,6 +355,7 @@ class Line3D:
         Returns
         -------
         Line3D
+
         """
         # Normalise the given parallel vector
         parallel = unit_vector(np.r_[parallel])
@@ -303,6 +373,7 @@ class Line3D:
         Returns
         -------
         Line3D
+
         """
         point1 = np.r_[point1]
         point2 = np.r_[point2]
@@ -434,7 +505,8 @@ class Line2D:
 
         Returns
         -------
-        Line3D
+        Line2D
+
         """
         point1 = np.r_[point1]
         point2 = np.r_[point2]
@@ -514,10 +586,11 @@ class Line2D:
         return (-self.line_coeff[0] * x - self.line_coeff[2]) / self.line_coeff[1]
 
     def plot_line(self, ends=None, fig=None):
+    #TODO: Check if the method works fine and revise the docstring.
         """
         Line segment plotter.
 
-        Plot a segment of the line between two values of the parameter `t` in x=x0 + a*t
+        Plot a segment of the line between two values of the parameter `t`  x=x0 + a*t
 
         Parameters
         ----------
@@ -552,6 +625,7 @@ class Line2D:
 
 
 def lstsq(points):
+    #TODO: Description of the return value
     """
     Perform a least squares fit and return the plane coefficients of the form 'a*x + b*y + c*z + d = 0'.
     The return vector beta=[a, b, c, d] is normalised for the direction v=[a, b, c] to be a unit vector.
