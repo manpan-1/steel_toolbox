@@ -2,7 +2,8 @@
 # https://gist.github.com/crmccreary/1074551
 
 """
-Module containing tools for Abaqus cae
+Module containing tools for Abaqus cae.
+
 """
 
 import os
