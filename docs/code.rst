@@ -1,5 +1,5 @@
-Documentation from Docstrings check
-***********************************
+Documentation from Docstrings
+*****************************
 
 This documentation is automatically generated from the docstrings using the 'autodoc' extension for Sphinx. The
 numpydoc formatting is followed.
