@@ -110,14 +110,14 @@ class TestSteelToolbox(unittest.TestCase):
         fab_class = 'fcA'
 
         case.add_theoretical_specimen(n_sides, length, f_yield, fab_class, p_class=p_class, thickness=thickness)
-        case.add_real_specimen('test_data/')
+        case.add_real_specimen('tests/test_data/')
 
         # Perform checks
         self.assertEqual(case.real_specimen.thickness, 3.)
         self.assertTrue(all(case.real_specimen.sides[0].ref_plane.plane_coeff == [-0.016774265594874858,
-                                                                                   0.99985606971653651,
-                                                                                   0.0025424131751930323,
-                                                                                   130.24190547807578]))
+                                                                                  0.99985606971653651,
+                                                                                  0.0025424131751930323,
+                                                                                  130.24190547807578]))
 
     def test_command_line_interface(self):
         """TestData the CLI."""
