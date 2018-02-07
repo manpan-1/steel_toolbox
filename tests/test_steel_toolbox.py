@@ -3,20 +3,16 @@
 
 """Tests for `steel_toolbox` package."""
 
-
 import unittest
 
-import numpy as np
-from matplotlib import pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+import steel_toolbox.polygonal as pg
 
 from click.testing import CliRunner
 
-import steel_toolbox as st
 from steel_toolbox import cli
 
 
-class TestSteel_toolbox(unittest.TestCase):
+class TestSteelToolbox(unittest.TestCase):
     """Tests for `steel_toolbox` package."""
 
     def setUp(self):
@@ -25,48 +21,103 @@ class TestSteel_toolbox(unittest.TestCase):
     def tearDown(self):
         """Tear down test fixtures, if any."""
 
-    def test_000_something(self):
-        """TestData something."""
+    def test_TheoreticalSpecimen(self):
+        """Test the TheoreticalSpecimen object for a polygonal column"""
 
-        # The following code is used to cross-check the validity of the results. Points for 2 planes are created and used
-        # for testing the fitting and plotting methods.
+        # Create a polygonal column object.
+        case = pg.PolygonalColumn()
 
-        # TestData xyz data from randomised z=1x+2y+3 for x,y values from -10 t0 +10
-        def f_3(beta, xy):
-            """ implicit definition of the plane"""
-            return beta[0] * xy[0] + beta[1] * xy[1] + beta[2]
+        n_sides = 16
+        p_class = 30.
+        thickness = 3.
+        length = 700.
+        f_yield = 700.
+        fab_class = 'fcA'
 
-        def make_plane_data(beta):
-            x = [x + np.random.rand() for x in np.linspace(-10, 10, 21)] + [x + np.random.rand() for x in
-                                                                            np.linspace(-10, 10, 21)] + [
-                    x + np.random.rand() for x in np.linspace(-10, 10, 21)]
-            y = [x + np.random.rand() for x in np.linspace(-10, 10, 21)] + [x + np.random.rand() for x in
-                                                                            np.linspace(0, 20, 21)] + [
-                    x + np.random.rand()
-                    for x in
-                    np.linspace(10, 30,
-                                21)]
-            z = f_3(beta, np.row_stack([x, y]))
-            x = np.r_[x]
-            y = np.r_[y]
-            z = np.r_[z]
-            return st.scan_3D.FlatFace(scanned_data=np.transpose(np.row_stack([x, y, z])))
+        case.add_theoretical_specimen(n_sides, length, f_yield, fab_class, p_class=p_class, thickness=thickness)
 
-        # Create points for the two planes.
-        p1 = make_plane_data([1, 0, -4])
-        p2 = make_plane_data([0, 1, -4])
+        # Check geometric properties.
+        elem = [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+                [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0],
+                [3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0]]
+        nodes = [(133.64776466459372,
+                  123.47443433950332,
+                  94.503240684758083,
+                  51.144785309768494,
+                  8.1835653604846712e-15,
+                  -51.14478530976848,
+                  -94.503240684758069,
+                  -123.47443433950332,
+                  -133.64776466459372,
+                  -123.47443433950333,
+                  -94.503240684758097,
+                  -51.144785309768565,
+                  -2.4550696081454014e-14,
+                  51.144785309768515,
+                  94.503240684758055,
+                  123.47443433950329),
+                 (0.0,
+                  51.144785309768487,
+                  94.503240684758069,
+                  123.47443433950332,
+                  133.64776466459372,
+                  123.47443433950332,
+                  94.503240684758083,
+                  51.144785309768501,
+                  1.6367130720969342e-14,
+                  -51.144785309768473,
+                  -94.503240684758069,
+                  -123.47443433950329,
+                  -133.64776466459372,
+                  -123.4744343395033,
+                  -94.503240684758097,
+                  -51.144785309768572)]
 
-        # Fit a plane on the created points.
-        p1.fit_plane()
-        p2.fit_plane()
-        lp12 = p1.ref_plane & p2.ref_plane
+        self.assertEqual(case.theoretical_specimen.geometry.length, 700.)
+        self.assertEqual(case.theoretical_specimen.geometry.r_circle, 132.79066165555551)
+        self.assertEqual(case.theoretical_specimen.geometry.thickness, 3.)
+        self.assertEqual(case.theoretical_specimen.geometry.cs_sketch.elem, elem)
+        self.assertEqual(case.theoretical_specimen.geometry.cs_sketch.nodes, nodes)
 
-        # Plot the results.
-        fig2 = plt.figure()
-        Axes3D(fig2)
-        p1.plot_face(fig=fig2)
-        p2.plot_face(fig=fig2)
-        lp12.plot_line(fig=fig2, ends=[-10, 10])
+        # Check calculations of cross sectional properties.
+        self.assertEqual(case.theoretical_specimen.cs_props.area, 2503.0450027345264)
+        self.assertEqual(case.theoretical_specimen.cs_props.xc, 0)
+        self.assertEqual(case.theoretical_specimen.cs_props.yc, 0)
+        self.assertEqual(case.theoretical_specimen.cs_props.min_dist, 131.07976034182852)
+        self.assertEqual(case.theoretical_specimen.cs_props.max_dist, 133.64776466459372)
+        self.assertEqual(case.theoretical_specimen.cs_props.moi_xx, 21787142.874024708)
+        self.assertEqual(case.theoretical_specimen.cs_props.moi_yy, 21787142.874024704)
+
+        # Check calculations of structural properties.
+        self.assertEqual(case.theoretical_specimen.struct_props.p_classification, 30.)
+        self.assertEqual(case.theoretical_specimen.struct_props.lmbda_y, 0.1378864937380441)
+        self.assertEqual(case.theoretical_specimen.struct_props.lmbda_z, 0.13788649373804412)
+        self.assertEqual(case.theoretical_specimen.struct_props.n_pl_rd, 1752131.5019141685)
+        self.assertEqual(case.theoretical_specimen.struct_props.t_classification, 263.69776782663507)
+        self.assertEqual(case.theoretical_specimen.struct_props.n_b_rd_shell, 1426314.6208939506)
+
+    def test_RealSpecimen(self):
+        """Test the TheoreticalSpecimen object for a polygonal column"""
+
+        # Create a polygonal column object.
+        case = pg.PolygonalColumn()
+
+        n_sides = 16
+        p_class = 30.
+        thickness = 3.
+        length = 700.
+        f_yield = 700.
+        fab_class = 'fcA'
+
+        case.add_theoretical_specimen(n_sides, length, f_yield, fab_class, p_class=p_class, thickness=thickness)
+        case.add_real_specimen('test_data/sp1/')
+
+        # Perform checks
+        self.assertEqual(case.real_specimen.thickness, 3.)
+        self.assertTrue(all(case.real_specimen.sides[0].ref_plane.plane_coeff == [-0.016774265594874858,
+                                                                                   0.99985606971653651,
+                                                                                   0.0025424131751930323,
+                                                                                   130.24190547807578]))
 
     def test_command_line_interface(self):
         """TestData the CLI."""
@@ -77,3 +128,7 @@ class TestSteel_toolbox(unittest.TestCase):
         help_result = runner.invoke(cli.main, ['--help'])
         assert help_result.exit_code == 0
         assert '--help  Show this message and exit.' in help_result.output
+
+
+if __name__ == '__main__':
+    unittest.main()
