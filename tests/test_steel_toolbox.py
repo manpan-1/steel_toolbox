@@ -110,7 +110,7 @@ class TestSteelToolbox(unittest.TestCase):
         fab_class = 'fcA'
 
         case.add_theoretical_specimen(n_sides, length, f_yield, fab_class, p_class=p_class, thickness=thickness)
-        case.add_real_specimen('test_data/sp1/')
+        case.add_real_specimen('./test_data/sp1/')
 
         # Perform checks
         self.assertEqual(case.real_specimen.thickness, 3.)
