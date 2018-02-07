@@ -22,11 +22,10 @@ deploy:
       VzBYQXRkbVFXVmxrUTBFZ2ZBK1k4Zm0yZ01ucWZHeSs3bFRxZUU0d3hFbEN3amxiK0JmaU05RlRF
       Rjdsb0JLS2dPek9NRHoxcmpsQWxqeVJUejUxcGRHcERoRzFvYVhBeXV5QWppQlVKT0t0ZDJLa3M9
 env:
-- TOXENV=py34
 - TOXENV=py35
 install:
 - pip install -U tox
 language: python
-python: 3.4
+python: 3.5
 script:
 - tox
