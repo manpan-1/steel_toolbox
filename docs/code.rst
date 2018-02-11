@@ -23,7 +23,7 @@ parametric: Manage parametric jobs
 
 lab_tests: Laboratory testing
 =============================
-.. automodule:: lab_test
+.. automodule:: lab_tests
    :members:
 
 scan_3D: Tools for 3d scanning

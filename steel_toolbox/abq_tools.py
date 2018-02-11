@@ -207,7 +207,7 @@ def fetch_eigenv(odb_name, step_name, n_eigen):
     eigenvalues = ()
     eigen_string = ""
     for J_eigenvalues in range(1, n_eigen + 1):
-        current_eigen = float(bckl_step.frames[J_eigenvalues].description[-11:])
+        current_eigen = float(bckl_step.frames[J_eigenvalues].description.split()[-1])
         eigenvalues = eigenvalues + (current_eigen,)
         eigen_string = eigen_string + "%.3E " % current_eigen
 

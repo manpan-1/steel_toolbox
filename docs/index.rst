@@ -1,5 +1,5 @@
-Welcome to steel_toolbox's documentation!
-=========================================
+Welcome to steeltoolbox's documentation!
+========================================
 
 Contents:
 

@@ -42,10 +42,13 @@ import steel_toolbox
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
     'sphinx.ext.viewcode',
     'numpydoc',
     'sphinx.ext.mathjax'
     ]
+# Try debugging html builder warnings
+numpydoc_show_class_members = False
 
 # Exclude modules from autodoc
 autodoc_mock_imports = ['odbAccess', 'abaqusConstants']
@@ -63,7 +66,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'steel_toolbox'
+project = u'steel\_toolbox'
 copyright = u"2017, Panagiotis Manoleas"
 
 # The version info for the project you're documenting, acts as replacement
@@ -217,7 +220,7 @@ latex_elements = {
 # [howto/manual]).
 latex_documents = [
     ('index', 'steel_toolbox.tex',
-     u'steel_toolbox Documentation',
+     u'steel\_toolbox Documentation',
      u'Panagiotis Manoleas', 'manual'),
 ]
 

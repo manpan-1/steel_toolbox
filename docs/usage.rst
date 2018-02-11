@@ -2,6 +2,6 @@
 Usage
 =====
 
-To use steel_toolbox in a project::
+To use steeltoolbox in a project::
 
     import steel_toolbox
