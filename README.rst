@@ -3,8 +3,8 @@ steel_toolbox
 =============
 
 
-.. image:: https://img.shields.io/pypi/v/steel_toolbox.svg
-        :target: https://pypi.python.org/pypi/steel_toolbox
+.. image:: https://img.shields.io/pypi/v/steeltoolbox.svg
+        :target: https://pypi.python.org/pypi/steeltoolbox
 
 .. image:: https://img.shields.io/travis/manpan-1/steel_toolbox.svg
         :target: https://travis-ci.org/manpan-1/steel_toolbox

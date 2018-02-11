@@ -2,6 +2,11 @@
 History
 =======
 
+0.4.0 (2017-10-06)
+------------------
+
+* Small patch for release badge on pypi. Code literally unchanged from 0.3.0
+
 0.3.0 (2017-10-06)
 ------------------
 
