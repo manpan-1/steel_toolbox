@@ -10,6 +10,7 @@ import steel_toolbox.steel_design as sd
 import steel_toolbox.lab_tests as lt
 import steel_toolbox.analytic_geometry as ag
 import steel_toolbox.scan_3D as s3d
+import pickle
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
@@ -870,7 +871,7 @@ def semi_closed_polygon(n_sides, radius, t, tg, rbend, nbend, l_lip):
     return [x_cs, y_cs, x_sector, y_sector]
 
 
-def main(add_real_specimens=False, add_experimental_data=True, make_plots=True):
+def main(add_real_specimens=True, add_experimental_data=True, make_plots=True, export='./data/polygonal.pkl'):
     # Create a polygonal column object.
     length = 700.
     f_yield = 700.
@@ -889,22 +890,12 @@ def main(add_real_specimens=False, add_experimental_data=True, make_plots=True):
     cases[8].add_theoretical_specimen(24, length, f_yield, fab_class, thickness=2., p_class=50.)
 
     if add_real_specimens:
-        cases[0].add_real_specimen('data/sp1/')
-        cases[1].add_real_specimen('data/sp2/')
-        cases[2].add_real_specimen('data/sp3/')
-        cases[3].add_real_specimen('data/sp4/')
-        cases[4].add_real_specimen('data/sp5/')
+        for i in range(9):
+            cases[i].add_real_specimen('data/sp{}/'.format(i + 1))
 
     if add_experimental_data:
-        cases[0].add_experiment_data('data/sp1/experiment/sp1.asc')
-        cases[1].add_experiment_data('data/sp2/experiment/sp2.asc')
-        cases[2].add_experiment_data('data/sp3/experiment/sp3.asc')
-        cases[3].add_experiment_data('data/sp4/experiment/sp4.asc')
-        cases[4].add_experiment_data('data/sp5/experiment/sp5.asc')
-        cases[5].add_experiment_data('data/sp6/experiment/sp6.asc')
-        cases[6].add_experiment_data('data/sp7/experiment/sp7.asc')
-        cases[7].add_experiment_data('data/sp8/experiment/sp8.asc')
-        cases[8].add_experiment_data('data/sp9/experiment/sp9.asc')
+        for i in range(9):
+            cases[i].add_experiment_data('data/sp{}/experiment/sp{}.asc'.format(i + 1, i + 1))
 
         # Correction of stroke tare value on some measurements.
         cases[1].experiment_data.offset_stroke()
@@ -924,5 +915,6 @@ def main(add_real_specimens=False, add_experimental_data=True, make_plots=True):
         cases[7].experiment_data.plot_strain_stress(ax=ax)
         cases[8].experiment_data.plot_strain_stress(ax=ax)
 
-
-    return cases
+    if export:
+        with open(export, 'wb') as fh:
+            pickle.dump(cases, fh)
