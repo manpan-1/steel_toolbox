@@ -2,4 +2,3 @@ scipy
 click
 matplotlib
 numpy
-numpydoc

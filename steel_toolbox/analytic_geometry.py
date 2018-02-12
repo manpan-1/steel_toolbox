@@ -436,8 +436,7 @@ class Line3D:
             ax = fig.gca(projection='3d')
         else:
             ax = fig.get_axes()[0]
-        ax.plot(x, y, z, label='parametric curve')
-        ax.legend()
+        ax.plot(x, y, z)
 
         plt.show()
 

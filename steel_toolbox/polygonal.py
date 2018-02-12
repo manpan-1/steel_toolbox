@@ -530,7 +530,7 @@ class RealSpecimen:
         fig1 = plt.figure()
         Axes3D(fig1)
         for i in range(-len(self.sides), 0):
-            self.sides[i].plot_face(reduced=0.003, fig=fig1)
+            self.sides[i].plot_face(reduced=0.001, fig=fig1)
         for i in range(-len(self.edges), 0):
             self.edges[i].ref_line.plot_line(fig=fig1, ends=[min_z, max_z])
 
