@@ -125,7 +125,7 @@ def parametric_run(
         # Wait some seconds to avoid multiple initiation of jobs
         if delay_jobs is True:
             sleep(round(10 * random(), 2))
-
+        #TODO: does the following line need to be under the if mk_subdirs condition??
         # Check if the directory exists
         if os.path.isdir("./" + job_id):
             print("Job already exists: A directory with the same name'" + job_id + "' exists in the cwd")
@@ -164,7 +164,7 @@ def parametric_run(
 
             # Add the result of the current job to the return list
             prj_results = prj_results + [job_return]
-
+        #TODO: Write log file
         except:
             print('Problem while executing job: ' + job_id)
             print('Job is canceled. See log file (no log file yet)')
