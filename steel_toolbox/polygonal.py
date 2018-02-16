@@ -476,13 +476,21 @@ class RealSpecimen:
 
         """
 
-        self.sides = [s3d.FlatFace.from_pickle(prefix + '{:02d}.pkl'.format(x)) for x in range(1, n_sides + 1)]
+        self.sides = []
+        for x in range(1, n_sides + 1):
+            print('Adding scanned data for facet number{}'.format(x))
+            self.sides.append(s3d.FlatFace.from_pickle(prefix + '{:02d}.pkl'.format(x)))
 
         if fit_planes:
-            [x.fit_plane() for x in self.sides]
+            for i, x in enumerate(self.sides):
+                print('Fitting a reference plane for facet number {}'.format(i))
+                x.fit_plane()
+
         if offset_to_midline:
             offset = self.thickness / 2
-            [x.offset_face(offset, offset_points=True) for x in self.sides]
+            for i, x in enumerate(self.sides):
+                print('Offseting plane and points of facet number {}'.format(i))
+                x.offset_face(offset, offset_points=True)
 
     def add_single_edge_from_pickle(self, filename):
         """
@@ -521,7 +529,7 @@ class RealSpecimen:
 
         if intrsct_lines:
             for x in range(-len(self.sides), 0):
-                self.edges[x].facet_intrsct_line = (self.sides[x].ref_plane & self.sides[x + 1].ref_plane)
+                self.edges[x].theoretical_edge = (self.sides[x].ref_plane & self.sides[x + 1].ref_plane)
 
     def find_real_edges(self, offset_to_midline=False, ref_lines=False):
         """
@@ -546,11 +554,13 @@ class RealSpecimen:
             offset = 0
 
         if isinstance(self.centre_line, ag.Line3D) and isinstance(self.edges, list):
-            for x in self.edges:
+            for i, x in enumerate(self.edges):
+                print('Calculating reference line for edge number {}'.format(i))
                 x.fit_circles(axis=2, offset=offset)
                 x.calc_edge_points(self.centre_line)
         else:
-            print('Wrong type inputs.')
+            print('Wrong type inputs. Check if the real_specimen object has a centre line assigned to it and if it has'
+                  'a list of edge lines.')
             return NotImplemented
 
         if ref_lines:
@@ -559,12 +569,14 @@ class RealSpecimen:
 
     def find_edge_imperfection_displacements(self):
         """Calculate distances of edge points to each reference line."""
-        for x in self.edges:
+        for i, x in enumerate(self.edges):
+            print('Calculating initial imperfection displacements for edge number {}.'.format(i))
             x.calc_edge2ref_dist()
 
     def find_facet_imperfection_displacements(self):
         """Calculate distances of edge points to each reference line."""
-        for x in self.sides:
+        for i, x in enumerate(self.sides):
+            print('Calculating initial imperfection displacements for facet number {}.'.format(i))
             x.calc_face2ref_dist()
 
     def plot_all(self):
@@ -925,8 +937,10 @@ def main(add_real_specimens=True, add_experimental_data=True, make_plots=True, e
     f_yield = 700.
     fab_class = 'fcA'
 
+    print('Creating the polygonal column objects.')
     cases = [PolygonalColumn() for i in range(9)]
 
+    print('Adding theoretical specimens with calculations to the polygonal columns')
     cases[0].add_theoretical_specimen(16, length, f_yield, fab_class, thickness=3., p_class=30.)
     cases[1].add_theoretical_specimen(16, length, f_yield, fab_class, thickness=3., p_class=40.)
     cases[2].add_theoretical_specimen(16, length, f_yield, fab_class, thickness=3., p_class=50.)
@@ -937,12 +951,16 @@ def main(add_real_specimens=True, add_experimental_data=True, make_plots=True, e
     cases[7].add_theoretical_specimen(24, length, f_yield, fab_class, thickness=2., p_class=40.)
     cases[8].add_theoretical_specimen(24, length, f_yield, fab_class, thickness=2., p_class=50.)
 
+    print('Adding real specimens with the 3d scanned data to the polygonal columns.')
     if add_real_specimens:
         for i in range(9):
+            print('Adding real scanned shape to specimen number {}'.format(i + 1))
             cases[i].add_real_specimen('data/sp{}/'.format(i + 1))
 
+    print('Adding experimental data from the compression tests.')
     if add_experimental_data:
         for i in range(9):
+            print('Adding experimental data to specimen number {}'.format(i + 1))
             cases[i].add_experiment('data/sp{}/experiment/sp{}.asc'.format(i + 1, i + 1))
 
         # Correction of stroke tare value on some measurements.
@@ -951,6 +969,7 @@ def main(add_real_specimens=True, add_experimental_data=True, make_plots=True, e
         cases[4].experiment_data.offset_stroke()
 
     if make_plots:
+        print('Producing plots.')
         # Strain-stress curves
         ax = cases[0].experiment_data.plot_strain_stress()
         cases[1].experiment_data.plot_strain_stress(ax=ax)
@@ -967,6 +986,7 @@ def main(add_real_specimens=True, add_experimental_data=True, make_plots=True, e
         # Displacement-load
 
     if export:
+        print('Exporting the generated object with all the processed specimens to pickle.')
         with open(export, 'wb') as fh:
             pickle.dump(cases, fh)
 

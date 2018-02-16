@@ -358,7 +358,7 @@ class RoundedEdge(Scan3D):
     """
 
     def __init__(self, scanned_data=None):
-        self.facet_intrsct_line = None
+        self.theoretical_edge = None
         self.edge_points = None
         self.circles = None
         self.edge2ref_dist = None
@@ -366,7 +366,7 @@ class RoundedEdge(Scan3D):
 
         super().__init__(scanned_data)
 
-    def add_facet_intrsct_line(self, line):
+    def add_theoretical_edge(self, line):
         """
         Add a reference line for the edge.
 
@@ -379,7 +379,7 @@ class RoundedEdge(Scan3D):
             this edge.
         """
         if isinstance(line, ag.Line3D):
-            self.facet_intrsct_line = line
+            self.theoretical_edge = line
         else:
             print("ref_line must be Line3D")
             return NotImplemented
@@ -424,9 +424,10 @@ class RoundedEdge(Scan3D):
             for circle in self.circles:
                 # Get the z-coordinate (height) of the current point
                 z_current = circle.points[0].coords[2]
+                #print('Finding edge point at height {}'.format(z_current))
 
                 # Get the x-y coordinates of the edge reference line and the mid-line for the given height, z.
-                ref_line_point = self.facet_intrsct_line.xy_for_z(z_current)
+                ref_line_point = self.theoretical_edge.xy_for_z(z_current)
                 other_line_point = other.xy_for_z(z_current)
 
                 # Create a temporary line object from the two points.
@@ -438,17 +439,18 @@ class RoundedEdge(Scan3D):
                 # If the line does not intersect with the current circle, print on screen and continue.
                 if line_circle_intersection is None:
                     print("Line and circle at height {} do not intersect. Point ignored.".format(z_current))
-                    return
 
-                # If the line intersects with the circle, select the outermost of the two intersection points.
-                if np.linalg.norm(line_circle_intersection[0]) > np.linalg.norm(line_circle_intersection[1]):
-                    outer = line_circle_intersection[0]
                 else:
-                    outer = line_circle_intersection[1]
+                    # If the line intersects with the circle, select the outermost of the two intersection points.
+                    if np.linalg.norm(line_circle_intersection[0]) > np.linalg.norm(line_circle_intersection[1]):
+                        outer = line_circle_intersection[0]
+                    else:
+                        outer = line_circle_intersection[1]
 
-                # Append the point to the list of edge_points
-                self.edge_points.append(ag.Point3D(np.append(outer, z_current)))
+                    # Append the point to the list of edge_points
+                    self.edge_points.append(ag.Point3D(np.append(outer, z_current)))
         else:
+            print('The input object is not of the class `Line3D`')
             return NotImplemented
 
     def calc_ref_line(self):
@@ -462,13 +464,14 @@ class RoundedEdge(Scan3D):
 
     def calc_edge2ref_dist(self):
         """Calculate distances of edge points to the reference line."""
-        if self.ref_line:
+        if self.ref_line and not self.ref_line is NotImplemented:
             self.edge2ref_dist = []
             for x in self.edge_points:
-                self.edge2ref_dist.append(x.distance_to_line(self.facet_intrsct_line))
+                self.edge2ref_dist.append(x.distance_to_line(self.theoretical_edge))
 
         else:
-            print('No reference line. First, add a reference line to the object.')
+            print('No reference line. First, add a reference line to the object. Check if the fitting process on the '
+                  'edge points converged. Edge ignored.')
             return NotImplemented
 
 

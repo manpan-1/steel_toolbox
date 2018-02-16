@@ -287,6 +287,7 @@ class Circle2D:
         vmin = min(xmin, ymin)
         vmax = max(xmax, ymax)
 
+        #TODO: Fix error: implement Point3D object
         # plot data
         plt.plot(self.points[:, 0], self.points[:, 1], 'ro', label='data', ms=8, mec='b', mew=1)
         plt.legend(loc='best', labelspacing=0.1)
@@ -421,9 +422,14 @@ class Line3D:
         # TODO: here the input is checked only to be a list. Check also that the contents are Point3D objects.
         if isinstance(points, list):
             linepts = line3d_fit(points)
-            return cls.from_2_points(linepts[0], linepts[1])
+            if not linepts is NotImplemented:
+                return cls.from_2_points(linepts[0], linepts[1])
+            else:
+                print('Line did not converge. A `NotImplemented` object is returned.')
+                return NotImplemented
         else:
             print("The input object is not of the class a list of points.")
+            return NotImplemented
 
     def xy_for_z(self, z_1):
         """Return x, y for a given z"""
@@ -1033,7 +1039,11 @@ def line3d_fit(points):
     datamean = data.mean(axis=0)
 
     # Do an SVD on the mean-centered data.
-    uu, dd, vv = np.linalg.svd(data - datamean)
+    try:
+        uu, dd, vv = np.linalg.svd(data - datamean)
+    except:
+        print('Fitting did not converge.')
+        return NotImplemented
 
     # Now vv[0] contains the first principal component, i.e. the direction
     # vector of the 'best fit' line in the least squares sense.
