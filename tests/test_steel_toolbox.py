@@ -6,6 +6,7 @@
 import unittest
 
 import steel_toolbox.polygonal as pg
+import steel_toolbox.analytic_geometry as ag
 
 from click.testing import CliRunner
 
@@ -119,6 +120,14 @@ class TestSteelToolbox(unittest.TestCase):
         #                                                                           0.99985606971653651,
         #                                                                           0.0025424131751930323,
         #                                                                           130.24190547807578]))
+
+    def test_point_methods(self):
+        """Test the `Point3D` class from `analytic_geometry`."""
+        a = ag.Line3D.from_2_points([0, 0, 0], [1, 0, 0])
+        b = ag.Point3D.from_coordinates(1, 1, 1)
+        c = ag.Plane3D.from_coefficients(0, 0, 1, 0)
+        self.assertAlmostEqual(b.distance_to_line(a)**2, 2)
+        self.assertAlmostEqual(b.distance_to_plane(c), 1.)
 
     def test_command_line_interface(self):
         """TestData the CLI."""

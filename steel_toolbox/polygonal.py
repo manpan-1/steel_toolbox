@@ -20,15 +20,26 @@ class PolygonalColumn:
     Polygonal column.
 
     """
+
     def __init__(self, theoretical_specimen=None, real_specimen=None, experiment_data=None):
 
         self.theoretical_specimen = theoretical_specimen
         self.real_specimen = real_specimen
         self.experiment_data = experiment_data
 
-    def add_theoretical_specimen(self, n_sides, length, f_yield, fab_class, r_circle=None, p_class=None, thickness=None):
-        if [i == None for i in [r_circle, p_class, thickness]].count(True) > 1:
-            print('Not enough info. Two out of the three optional arguments {r_circle, p_class, thickness} must be given.')
+    def add_theoretical_specimen(self,
+                                 n_sides,
+                                 length,
+                                 f_yield,
+                                 fab_class,
+                                 r_circle=None,
+                                 p_class=None,
+                                 thickness=None
+                                 ):
+
+        if [i is None for i in [r_circle, p_class, thickness]].count(True) > 1:
+            print('Not enough info. Two out of the three optional arguments {r_circle, p_class, thickness}'
+                  ' must be given.')
             return
         else:
             if p_class is None:
@@ -93,17 +104,16 @@ class PolygonalColumn:
 
         if n_sides == 0 and n_edges == 0:
             print('No side or edge files were found in the directory.')
-            NotImplemented
-            return
+            return NotImplemented
 
         # Sort the numbers fetched from the filenames and check if they are sequential or if there are numbers missing.
         side_filename_numbers.sort()
         edge_filename_numbers.sort()
-        if not all([x == num - 1 for x, num in enumerate(side_filename_numbers)] + [x == num - 1 for x, num in enumerate(edge_filename_numbers)]):
+        if (not all([x == num - 1 for x, num in enumerate(side_filename_numbers)]) and
+           not all([x == num - 1 for x, num in enumerate(edge_filename_numbers)])):
             print("Problem with filenames. Check if the filenames are correct (see method's documentation) ant the "
                   "numbering in the filenames is sequential (no sides or edges missing)")
-            NotImplemented
-            return
+            return NotImplemented
 
         # Create a polygon specimen object.
         if self.theoretical_specimen is None:
@@ -125,17 +135,24 @@ class PolygonalColumn:
         # intersection lines of adjacent sides are calculated and added to the edges as reference lines. Otherwise, the
         # edges are imported from whatever files are found and no reference lines are calculated.
         if side_filename_numbers == edge_filename_numbers:
-            ref_lines = True
+            intrsct_lines = True
         else:
-            ref_lines = False
+            intrsct_lines = False
 
-        specimen.add_all_edges(n_edges, path + 'edge_', ref_lines=ref_lines)
+        specimen.add_all_edges(n_edges, path + 'edge_', intrsct_lines=intrsct_lines)
 
         # Find a series of points for each edge based on the scanned surface.
-        specimen.find_real_edges(offset_to_midline=True)
+        specimen.find_real_edges(offset_to_midline=True, ref_lines=True)
+
+        # Calculate the initial imperfection displacements based on the edge and facet reference line and plane
+        # accordingly.
+        specimen.find_edge_imperfection_displacements()
+        specimen.find_facet_imperfection_displacements()
+
+        # Assign the constructed specimen to the object
         self.real_specimen = specimen
 
-    def add_experiment_data(self, fh):
+    def add_experiment(self, fh):
         """Add and post-process data from a test"""
         self.experiment_data = TestData.from_file(fh)
         self.experiment_data.specimen_length = self.theoretical_specimen.geometry.length
@@ -155,7 +172,6 @@ class TheoreticalSpecimen(sd.Part):
                  material=None,
                  struct_props=None,
                  bc_loads=None):
-
         super().__init__(
             geometry,
             cs_props,
@@ -301,7 +317,6 @@ class TheoreticalSpecimen(sd.Part):
             f_yield,
             fab_class
     ):
-
         """
         Create theoretical polygonal column object for given number of sides and cross-section slenderness.
 
@@ -448,10 +463,17 @@ class RealSpecimen:
         `path/basenameXX.pkl`, where XX is an id number in ascending order starting from 01.
         Only the `path/basename` is given as input to this method.
 
-        :param n_sides:
-        :param prefix:
-        :param fit_planes:
-        :return:
+        Parameters
+        ----------
+        n_sides : int
+            Number of sides of the polygonal cross-section to look for in the directory
+        prefix : str
+            Path and file name prefix for the pickle files containing the scanned data points.
+        fit_planes :
+            Perform least square fitting on the imported data to calculate the reference planes.
+        offset_to_midline :
+            Offset the data points and the fitted plane by half the thickness to be on the midline of the cross-section.
+
         """
 
         self.sides = [s3d.FlatFace.from_pickle(prefix + '{:02d}.pkl'.format(x)) for x in range(1, n_sides + 1)]
@@ -473,7 +495,7 @@ class RealSpecimen:
         """
         self.edges.append(s3d.RoundedEdge.from_pickle(filename))
 
-    def add_all_edges(self, n_sides, prefix, ref_lines=False):
+    def add_all_edges(self, n_sides, prefix, intrsct_lines=False):
         """
         Add multiple edges.
 
@@ -482,21 +504,26 @@ class RealSpecimen:
         `path/basenameXX.pkl`, where XX is an id number in ascending order starting from 01.
         Only the `path/filename` is given as input to this method.
 
-        After adding the sequential edges, if ref_lines=True, the reference lines are calculated as the intersections
-        of sequential sides.
+        After adding the sequential edges, if intrsct_lines=True, the reference lines are calculated as the
+        intersections of sequential sides.
 
-        :param n_sides:
-        :param prefix:
-        :param ref_lines:
-        :return:
+        Parameters
+        ----------
+        n_sides : int
+            Number of edges to be added (number of cross-sections sides).
+        prefix : str
+            Path and prefix of naming (read description for the expected naming scheme)
+        intrsct_lines : bool
+            Assign intersection lines to the edges from the intersection of adjacent facets.
+
         """
         self.edges = [s3d.RoundedEdge.from_pickle(prefix + '{:02d}.pkl'.format(x)) for x in range(1, n_sides + 1)]
 
-        if ref_lines:
+        if intrsct_lines:
             for x in range(-len(self.sides), 0):
-                self.edges[x].add_ref_line(self.sides[x].ref_plane & self.sides[x + 1].ref_plane)
+                self.edges[x].facet_intrsct_line = (self.sides[x].ref_plane & self.sides[x + 1].ref_plane)
 
-    def find_real_edges(self, offset_to_midline=False):
+    def find_real_edges(self, offset_to_midline=False, ref_lines=False):
         """
         Find edge points on the scanned rounded edge.
 
@@ -505,7 +532,13 @@ class RealSpecimen:
         the rounded edge scanned points and the line passing through the reference edge (see `add_all_edges`
         documentation) and the polygon's centre line.
 
-        :return:
+        Parameters
+        ----------
+        offset_to_midline : bool
+            Offset the calculated points to the midline of the section based on the thickness property of the object.
+        ref_lines : bool
+            Assign reference lines to the edges by best fitting on the real edge points.
+
         """
         if offset_to_midline:
             offset = -self.thickness / 2
@@ -515,9 +548,24 @@ class RealSpecimen:
         if isinstance(self.centre_line, ag.Line3D) and isinstance(self.edges, list):
             for x in self.edges:
                 x.fit_circles(axis=2, offset=offset)
-                x.intersect_data(self.centre_line)
+                x.calc_edge_points(self.centre_line)
         else:
-            NotImplemented
+            print('Wrong type inputs.')
+            return NotImplemented
+
+        if ref_lines:
+            for x in self.edges:
+                x.calc_ref_line()
+
+    def find_edge_imperfection_displacements(self):
+        """Calculate distances of edge points to each reference line."""
+        for x in self.edges:
+            x.calc_edge2ref_dist()
+
+    def find_facet_imperfection_displacements(self):
+        """Calculate distances of edge points to each reference line."""
+        for x in self.sides:
+            x.calc_face2ref_dist()
 
     def plot_all(self):
         """
@@ -532,7 +580,7 @@ class RealSpecimen:
         for i in range(-len(self.sides), 0):
             self.sides[i].plot_face(reduced=0.001, fig=fig1)
         for i in range(-len(self.edges), 0):
-            self.edges[i].ref_line.plot_line(fig=fig1, ends=[min_z, max_z])
+            self.edges[i].facet_intrsct_line.plot_line(fig=fig1, ends=[min_z, max_z])
 
     def print_report(self):
         """
@@ -549,9 +597,9 @@ class RealSpecimen:
                 i + 1,
                 i + 1,
                 i + 2,
-                self.edges[i].ref_line.parallel,
-                self.edges[i].ref_line.xy_for_z(min_z),
-                self.edges[i].ref_line.xy_for_z(max_z))
+                self.edges[i].facet_intrsct_line.parallel,
+                self.edges[i].facet_intrsct_line.xy_for_z(min_z),
+                self.edges[i].facet_intrsct_line.xy_for_z(max_z))
             )
             print('')
 
@@ -604,7 +652,7 @@ class TestData(lt.Experiment):
         if offset is None:
             offset = self.data['Stroke'][0]
 
-        self.data['Stroke'] =  self.data['Stroke'] - offset
+        self.data['Stroke'] = self.data['Stroke'] - offset
 
     def calc_disp_from_strain(self):
         """Calculate the specimen clear axial deformation based on measured strains"""
@@ -617,7 +665,7 @@ class TestData(lt.Experiment):
         self.add_new_channel_zeros('avg_strain')
         i = 0
         # Collect all strain gauge records.
-        for key in self.data.keys() :
+        for key in self.data.keys():
             if len(key) > 2:
                 if key[:2].isdigit() and (key[2] is 'F') or (key[2] is 'C'):
                     self.data['avg_strain'] = self.data['avg_strain'] + self.data[key]
@@ -711,9 +759,9 @@ class TestData(lt.Experiment):
         Load eccentricity based on strain pairs.
 
         Calculate the eccentricity of an axial load to the neutral axis of a specimen for which pairs of strains are
-        monitored with strain gauges. The eccentricity is calculated on one axis and requires the moment of inertia around
-        it and a pair of strains on tow positions symmetric to the neutral axis.
-        Elastic behaviour is assumed.
+        monitored with strain gauges. The eccentricity is calculated on one axis and requires the moment of inertia
+        around it and a pair of strains on tow positions symmetric to the neutral axis. Elastic behaviour is assumed.
+
         """
 
         # Default values.
@@ -895,7 +943,7 @@ def main(add_real_specimens=True, add_experimental_data=True, make_plots=True, e
 
     if add_experimental_data:
         for i in range(9):
-            cases[i].add_experiment_data('data/sp{}/experiment/sp{}.asc'.format(i + 1, i + 1))
+            cases[i].add_experiment('data/sp{}/experiment/sp{}.asc'.format(i + 1, i + 1))
 
         # Correction of stroke tare value on some measurements.
         cases[1].experiment_data.offset_stroke()
@@ -903,6 +951,7 @@ def main(add_real_specimens=True, add_experimental_data=True, make_plots=True, e
         cases[4].experiment_data.offset_stroke()
 
     if make_plots:
+        # Strain-stress curves
         ax = cases[0].experiment_data.plot_strain_stress()
         cases[1].experiment_data.plot_strain_stress(ax=ax)
         cases[2].experiment_data.plot_strain_stress(ax=ax)
@@ -915,6 +964,10 @@ def main(add_real_specimens=True, add_experimental_data=True, make_plots=True, e
         cases[7].experiment_data.plot_strain_stress(ax=ax)
         cases[8].experiment_data.plot_strain_stress(ax=ax)
 
+        # Displacement-load
+
     if export:
         with open(export, 'wb') as fh:
             pickle.dump(cases, fh)
+
+    return cases

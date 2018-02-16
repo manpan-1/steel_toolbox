@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 
 
 class Plane3D:
-    #TODO: Bullet list items in docstring.
+    # TODO: Bullet list items in docstring.
     """
     Flat plane in three dimensions.
 
@@ -30,6 +30,7 @@ class Plane3D:
         Coefficients of the implicit form of the plane, `a*x + b*y + c*z + d = 0`.
 
     """
+
     def __init__(self, plane_coeff=None):
         self.plane_coeff = plane_coeff
 
@@ -77,7 +78,7 @@ class Plane3D:
             return NotImplemented
 
     def offset_plane(self, offset):
-        #TODO: Conclude on the proper way to document input arguments of specific form, e.g. 3by1 array of floats...
+        # TODO: Conclude on the proper way to document input arguments of specific form, e.g. 3by1 array of floats...
         """
         Offset the plane.
 
@@ -94,7 +95,7 @@ class Plane3D:
             The method modifies the `plane_coeff` to apply the offset.
 
         """
-        self.plane_coeff = np.append(self.plane_coeff[:3], self.plane_coeff[3]-offset)
+        self.plane_coeff = np.append(self.plane_coeff[:3], self.plane_coeff[3] - offset)
 
     def z_return(self, x, y):
         """
@@ -111,7 +112,7 @@ class Plane3D:
 
         """
         if not isinstance(self.plane_coeff, np.ndarray):
-            print('Wrong od missing plane coefficients')
+            print('Wrong or missing plane coefficients')
             return NotImplemented
         alpha = (-self.plane_coeff / self.plane_coeff[2])
         z = alpha[0] * x + alpha[1] * y + alpha[3]
@@ -143,7 +144,7 @@ class Plane3D:
 
     @classmethod
     def from_fitting(cls, points, lay_on_xy=False):
-        #TODO: fix the "array like" the form of the array...
+        # TODO: fix the "array like" the form of the array...
         """
         Create plane object from fitting on points.
 
@@ -180,9 +181,16 @@ class Plane3D:
         plane_coeff = lstsq_planar_fit(points, lay_on_xy=lay_on_xy)
         return cls(plane_coeff=plane_coeff)
 
+    @classmethod
+    def from_coefficients(cls, a, b, c, d):
+        if all([isnumber(a), isnumber(b), isnumber(c), isnumber(d)]):
+            return cls(np.r_[a, b, c, d])
+        else:
+            print("At least one of the input objects is not numeric")
+
 
 class Circle2D:
-    #TODO: [x,y] floats on the docstring.
+    # TODO: [x,y] floats on the docstring.
     """
     A circle in two dimensions.
 
@@ -204,7 +212,7 @@ class Circle2D:
         self.points = None
 
     def intersect_with_line(self, line):
-        #TODO: what happens if not implementid (no intersection) on docstring.
+        # TODO: what happens if not implementid (no intersection) on docstring.
         """
         Intersect circle with line.
 
@@ -225,9 +233,9 @@ class Circle2D:
             radius = self.radius
 
             # Terms of the quadratic equation for the line-circle intersection.
-            alfa = 1 + (a / b)**2
-            beta = 2 * (c * a / b**2 + yc * a / b - xc)
-            gama = xc**2 + yc**2 - radius**2 + (c / b)**2 + 2 * c * yc / b
+            alfa = 1 + (a / b) ** 2
+            beta = 2 * (c * a / b ** 2 + yc * a / b - xc)
+            gama = xc ** 2 + yc ** 2 - radius ** 2 + (c / b) ** 2 + 2 * c * yc / b
 
             # Solution
             x_intersect = solve_quadratic(alfa, beta, gama)
@@ -236,17 +244,18 @@ class Circle2D:
             if x_intersect is None:
                 print("The line does not intersect with the circle")
                 return
-            else:
-                # Calculate y.
-                y_intersect = np.r_[-(c + a * x_intersect[0]) / b, -(c + a * x_intersect[1]) / b]
 
-                # Points.
-                point1 = np.r_[x_intersect[0], y_intersect[0]]
-                point2 = np.r_[x_intersect[1], y_intersect[1]]
-                return [point1, point2]
+            # TODO: Here, a Point2D class would be convenient. Implement in analytic_geometry
+            # Calculate y.
+            y_intersect = np.r_[-(c + a * x_intersect[0]) / b, -(c + a * x_intersect[1]) / b]
+
+            # Points.
+            point1 = np.r_[x_intersect[0], y_intersect[0]]
+            point2 = np.r_[x_intersect[1], y_intersect[1]]
+            return [point1, point2]
         else:
-            print("Object of type 'Line2D' is expected")
-            NotImplemented
+            print("The input object is not of the class `Line2D`")
+            return NotImplemented
 
     def plot_circle(self):
         """
@@ -290,7 +299,7 @@ class Circle2D:
 
     @classmethod
     def from_fitting(cls, points):
-        #TODO: fix points docstring...
+        # TODO: fix points docstring...
         """
         Create circle object from fitting on points.
 
@@ -315,7 +324,7 @@ class Circle2D:
 
 
 class Line3D:
-    #TODO: create xz_for_y and yz_for_x methods, equivalent to xy_for_z AND fix the parameters' docstring
+    # TODO: create xz_for_y and yz_for_x methods, equivalent to xy_for_z AND fix the parameters' docstring
     """
     A line in three dimensions.
 
@@ -359,7 +368,7 @@ class Line3D:
         """
         # Normalise the given parallel vector
         parallel = unit_vector(np.r_[parallel])
-        return cls(point=np.r_[point], parallel=parallel)
+        return cls(point=Point3D(np.r_[point]), parallel=parallel)
 
     @classmethod
     def from_2_points(cls, point1, point2):
@@ -379,7 +388,7 @@ class Line3D:
         point2 = np.r_[point2]
         # Calculate and normalise the direction vector.
         parallel = unit_vector(point1 - point2)
-        return cls(point=point1, parallel=parallel)
+        return cls(point=Point3D(point1), parallel=parallel)
 
     @classmethod
     def from_pickle(cls, fh):
@@ -398,11 +407,29 @@ class Line3D:
 
         return cls.from_2_points(np.r_[points[0]], np.r_[points[1]])
 
+    @classmethod
+    def from_fitting(cls, points):
+        """
+        Create a `Line3D` object from fitting on points
+
+        Parameters
+        ----------
+        points : list of Point3D objects
+            Points to which the 3D line is fitted
+
+        """
+        # TODO: here the input is checked only to be a list. Check also that the contents are Point3D objects.
+        if isinstance(points, list):
+            linepts = line3d_fit(points)
+            return cls.from_2_points(linepts[0], linepts[1])
+        else:
+            print("The input object is not of the class a list of points.")
+
     def xy_for_z(self, z_1):
         """Return x, y for a given z"""
-        t = (z_1 - self.point[2]) / self.parallel[2]
-        x_1 = self.parallel[0] * t + self.point[0]
-        y_1 = self.parallel[1] * t + self.point[1]
+        t = (z_1 - self.point.coords[2]) / self.parallel[2]
+        x_1 = self.parallel[0] * t + self.point.coords[0]
+        y_1 = self.parallel[1] * t + self.point.coords[1]
         return np.r_[x_1, y_1, z_1]
 
     def plot_line(self, ends=None, fig=None):
@@ -427,9 +454,9 @@ class Line3D:
         if ends is None:
             ends = np.array([-1, 1])
 
-        x = self.point[0] + self.parallel[0] * np.r_[ends]
-        y = self.point[1] + self.parallel[1] * np.r_[ends]
-        z = self.point[2] + self.parallel[2] * np.r_[ends]
+        x = self.point.coords[0] + self.parallel[0] * np.r_[ends]
+        y = self.point.coords[1] + self.parallel[1] * np.r_[ends]
+        z = self.point.coords[2] + self.parallel[2] * np.r_[ends]
 
         if fig is None:
             fig = plt.figure()
@@ -444,7 +471,7 @@ class Line3D:
 
 
 class Line2D:
-    #TODO: fix list items in docstring.
+    # TODO: fix list items in docstring.
     """
     A line in two dimensions.
 
@@ -585,7 +612,7 @@ class Line2D:
         return (-self.line_coeff[0] * x - self.line_coeff[2]) / self.line_coeff[1]
 
     def plot_line(self, ends=None, fig=None):
-    #TODO: Check if the method works fine and revise the docstring.
+        # TODO: Check if the method works fine and revise the docstring.
         """
         Line segment plotter.
 
@@ -623,8 +650,78 @@ class Line2D:
         return fig
 
 
+class Point3D:
+    """A point in 3 dimensions."""
+
+    def __init__(self, coords):
+        self.coords = coords
+
+    @classmethod
+    def from_coordinates(cls, x, y, z):
+        """
+        Create a Point3D by from it's 3 coordinates.
+
+        Parameters
+        ----------
+        x, y, z : float
+            The values for the three coordinates.
+
+        """
+        if isnumber(x) and isnumber(y) and isnumber(z):
+            return cls(np.r_[x, y, z])
+        else:
+            print('At least one of the inputs is not numeric.')
+            return NotImplemented
+
+    def distance_to_plane(self, plane):
+        """
+        Measure the distance of the point to a plane.
+
+        Parameters
+        ----------
+        plane : Plane3D object.
+            Plane from to which the distance is measured.
+
+        Returns
+        -------
+        float
+
+        """
+        # Check if the given input is of the class Plane3D
+        if isinstance(plane, Plane3D):
+            dist = np.dot(plane.plane_coeff, np.concatenate((self.coords, [1]))) / np.linalg.norm(plane.plane_coeff[:3])
+            return dist
+        else:
+            print('The input object is not of the class `Plane3D`')
+            return NotImplemented
+
+    def distance_to_line(self, line):
+        """
+        Measure the distance of the point to a line.
+
+        Parameters
+        ----------
+        line : Line3D object.
+            Line from to which the distance is measured.
+
+        Returns
+        -------
+        float
+
+        """
+        if isinstance(line, Line3D):
+            s_direction = line.parallel
+            s_norm = np.linalg.norm(s_direction)
+            p_diff = line.point.coords - self.coords
+            d = np.linalg.norm(np.cross(p_diff, s_direction)) / s_norm
+            return d
+        else:
+            print('The input object is not of the class `Line3D`')
+            return NotImplemented
+
+
 def lstsq(points):
-    #TODO: Description of the return value
+    # TODO: Description of the return value
     """
     Perform a least squares fit and return the plane coefficients of the form 'a*x + b*y + c*z + d = 0'.
     The return vector beta=[a, b, c, d] is normalised for the direction v=[a, b, c] to be a unit vector.
@@ -639,8 +736,11 @@ def lstsq(points):
 
     """
     # best-fit linear plane
-    a = np.c_[points[:, 0], points[:, 1], np.ones(points.shape[0])]
-    c, _, _, _ = np.linalg.lstsq(a, points[:, 2])  # coefficients
+    x_list = [i.coords[0] for i in points]
+    y_list = [i.coords[1] for i in points]
+    z_list = [i.coords[2] for i in points]
+    a = np.c_[x_list, y_list, np.ones(len(points))]
+    c, _, _, _ = np.linalg.lstsq(a, z_list)  # coefficients
 
     # The coefficients are returned as an array beta=[a, b, c, d] from the implicit form 'a*x + b*y + c*z + d = 0'.
     # The vector is normalized so that [a, b, c] has a unit length and `d` is positive.
@@ -698,7 +798,7 @@ def lstsq_planar_fit(points, lay_on_xy=False):
         beta2 = lstsq(transformed)
 
         # Return the fitted plane to the original position of the points.
-        beta2[:3] = rotate_points([beta2[:3]], -rot_ang, rot_ax)
+        beta2[:3] = rotate_points([Point3D(beta2[:3])], -rot_ang, rot_ax)[0].coords
 
         # Store the fitted plane in the instance.
         return beta2
@@ -708,6 +808,7 @@ def lstsq_planar_fit(points, lay_on_xy=False):
         return lstsq(points)
 
 
+# TODO: adjust method to the Point3D update or delete.
 def quadratic_fit(points):
     """
     Fit a quadratic surface to 3D points.
@@ -734,6 +835,7 @@ def quadratic_fit(points):
     return beta
 
 
+# TODO: Function not used. Decide what to do with it.
 def odr_planar_fit(points, rand_3_estimate=False):
     """
     Fit a plane to 3d points.
@@ -802,6 +904,7 @@ def odr_planar_fit(points, rand_3_estimate=False):
     return lsc_out.beta / lsc_out.beta[3]
 
 
+# TODO: recheck the docstring, changes are made to adopt the Point3D objects.
 def circular_fit(points):
     """
     Fit a circle to a set of 2D points.
@@ -810,7 +913,7 @@ def circular_fit(points):
 
     Parameters
     ----------
-    points : 2d array like
+    points : list
         List of points[[x0, y0, z0], ...[xn, yn, zn]]
 
     Returns
@@ -825,7 +928,8 @@ def circular_fit(points):
 
     https://github.com/mpastell/SciPy-CookBook/blob/master/originals/Least_Squares_Circle_attachments/least_squares_circle_v1d.py
     """
-    x, y = points[:, 0], points[:, 1]
+    x = np.r_[[i.coords[0] for i in points]]
+    y = np.r_[[i.coords[1] for i in points]]
 
     def calc_r(xc, yc):
         """ calculate the distance of each 2D points from the center (xc, yc) """
@@ -895,6 +999,65 @@ def circular_fit(points):
     return xc_odr, yc_odr, r_odr
 
 
+def line3d_fit(points):
+    """
+    Fit a line in 3D on a list of points
+
+    Parameters
+    ----------
+    points : list of Point3D
+        Cloud of points to best fit the line.
+
+    Returns
+    -------
+    Line3D
+        Fitted line.
+
+    """
+    x, y, z = [], [], []
+    for i in points:
+        x.append(i.coords[0])
+        y.append(i.coords[1])
+        z.append(i.coords[2])
+
+    x = np.array(x)
+    y = np.array(y)
+    z = np.array(z)
+
+    data = np.concatenate((x[:, np.newaxis],
+                           y[:, np.newaxis],
+                           z[:, np.newaxis]),
+                          axis=1)
+
+    # Calculate the mean of the points, i.e. the 'center' of the cloud
+    datamean = data.mean(axis=0)
+
+    # Do an SVD on the mean-centered data.
+    uu, dd, vv = np.linalg.svd(data - datamean)
+
+    # Now vv[0] contains the first principal component, i.e. the direction
+    # vector of the 'best fit' line in the least squares sense.
+
+    # Generate 2 points along this best fit line.
+    linepts = vv[0] * np.mgrid[-100:100:2j][:, np.newaxis]
+
+    linepts += datamean
+    return linepts
+
+    # TODO: use the code below to make a plotting function.
+    # # shift by the mean to get the line in the right place
+    # # Verify that everything looks right.
+    #
+    # import matplotlib.pyplot as plt
+    # import mpl_toolkits.mplot3d as m3d
+    #
+    # ax = m3d.Axes3D(plt.figure())
+    # ax.scatter3D(*data.T)
+    # ax.plot3D(*linepts.T)
+    # plt.show()
+
+
+# TODO: function should be instead implemented as a method of the Point3D class.
 def rotate_points(points, rot_ang, rot_ax):
     """
     Rotate points for given angle around axis.
@@ -926,7 +1089,7 @@ def rotate_points(points, rot_ang, rot_ax):
     ]
 
     # Transform the points.
-    return np.array([np.dot(p, rot_mtx) for p in points])
+    return [Point3D(np.dot(p.coords, rot_mtx)) for p in points]
 
 
 def unit_vector(vector):
@@ -969,3 +1132,22 @@ def solve_quadratic(a, b, c):
         x1 = (-b - np.sqrt(d)) / (2 * a)
         x2 = (-b + np.sqrt(d)) / (2 * a)
         return [x1, x2]
+
+
+def isnumber(x):
+    """
+    Checks if the given object is numeric.
+
+    Either `float` or `int` will return `True`. In any other case the return is `False`.
+
+    Parameters
+    ----------
+    x : any
+        Object to be checked.
+
+    Returns
+    -------
+    boolean.
+
+    """
+    return isinstance(x, int) or isinstance(x, float)

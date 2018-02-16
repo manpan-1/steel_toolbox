@@ -49,12 +49,10 @@ class Scan3D:
             identifier = fl.split(None, 1)[1]
 
         if identifier == 'ASCII STL file generated with VxScan by Creaform.\n':
-            # Correct the file format
+            # Repair the file format
             Scan3D.repair_stl_file_structure(fh, del_original=del_original)
 
-        scanned_data = mesh.Mesh.from_file(fh)
-
-        return cls(scanned_data=scanned_data)
+        return cls(scanned_data=Scan3D.array2points(mesh.Mesh.from_file(fh)))
 
     @classmethod
     def from_pickle(cls, fh):
@@ -64,8 +62,8 @@ class Scan3D:
         Used to import data exported from blender. The pickle file is should contain a list of lists.
 
         """
-        with open(fh, 'rb') as f:
-            return cls(scanned_data=np.array(pickle.load(f)))
+        with open(fh, 'rb') as fh:
+            return cls(scanned_data=Scan3D.array2points(np.array(pickle.load(fh))))
 
     @classmethod
     def from_coordinates_file(cls, fh):
@@ -88,7 +86,7 @@ class Scan3D:
             for i, l in enumerate(f):
                 scanned_data[i] = l.split()
 
-        return cls(scanned_data=scanned_data)
+        return cls(scanned_data=Scan3D.array2points(scanned_data))
 
     @staticmethod
     def repair_stl_file_structure(fh, del_original=None):
@@ -127,6 +125,34 @@ class Scan3D:
         if del_original:
             os.remove(old_file)
 
+    @staticmethod
+    def array2points(array):
+        """
+        Convert an array of coordinates to a list of Point3D objects.
+
+        Parameters
+        ----------
+        array : {n*3} np.ndarray
+
+        Returns
+        -------
+        list of Point3D.
+
+        """
+        if isinstance(array, np.ndarray):
+            if np.shape(array)[1] == 3:
+                point_list = []
+                for i in array:
+                    point_list.append(ag.Point3D.from_coordinates(i[0], i[1], i[2]))
+                return point_list
+            else:
+                print('Wrong array dimensions. The array must have 3 columns.')
+                return NotImplemented
+        else:
+            print('Wrong input. Input must be np.ndarray')
+            return NotImplemented
+
+    # TODO:Docstring...
     def sort_on_axis(self, axis=None):
         """
         Sort scanned data.
@@ -139,8 +165,9 @@ class Scan3D:
         if axis is None:
             axis = 0
 
-        self.scanned_data = self.scanned_data[np.argsort(self.scanned_data[:, axis])]
+        self.scanned_data.sort(key=lambda x: x.coords[axis])
 
+    # TODO:Docstring...
     def quantize(self, axis=None, tolerance=None):
         """
         Group the scanned data.
@@ -159,12 +186,12 @@ class Scan3D:
             tolerance = 1e-4
 
         self.sort_on_axis(axis=axis)
-        self.grouped_data = [np.r_[[self.scanned_data[0]]]]
+        self.grouped_data = [[self.scanned_data[0]]]
         for point in self.scanned_data:
-            if point[axis] - self.grouped_data[-1][0][axis] < tolerance:
-                self.grouped_data[-1] = np.vstack([self.grouped_data[-1], point])
+            if abs(point.coords[axis] - self.grouped_data[-1][0].coords[axis]) < tolerance:
+                self.grouped_data[-1].append(point)
             else:
-                self.grouped_data.append(np.r_[[point]])
+                self.grouped_data.append([point])
 
     def centre_size(self):
         """
@@ -173,12 +200,12 @@ class Scan3D:
         Used in combination with the plotting methods to define the bounding box.
         """
         # Bounding box of the points.
-        x_min = min([i[0] for i in self.scanned_data])
-        x_max = max([i[0] for i in self.scanned_data])
-        y_min = min([i[1] for i in self.scanned_data])
-        y_max = max([i[1] for i in self.scanned_data])
-        z_min = min([i[2] for i in self.scanned_data])
-        z_max = max([i[2] for i in self.scanned_data])
+        x_min = min([i.coords[0] for i in self.scanned_data])
+        x_max = max([i.coords[0] for i in self.scanned_data])
+        y_min = min([i.coords[1] for i in self.scanned_data])
+        y_max = max([i.coords[1] for i in self.scanned_data])
+        z_min = min([i.coords[2] for i in self.scanned_data])
+        z_max = max([i.coords[2] for i in self.scanned_data])
         x_range = abs(x_max - x_min)
         y_range = abs(y_max - y_min)
         z_range = abs(z_max - z_min)
@@ -189,21 +216,22 @@ class Scan3D:
         self.centre = np.r_[x_mid, y_mid, z_mid]
         self.size = np.r_[x_range, y_range, z_range]
 
-    def plot_surf(self):
-        """
-        Method plotting the model as a 3D surface.
-        """
-        # Create the x, y, z numpy arrays
-        x = [i[0] for i in self.scanned_data]
-        y = [i[1] for i in self.scanned_data]
-        z = [i[2] for i in self.scanned_data]
-
-        # Create a figure.
-        fig = plt.figure()
-        ax = fig.gca(projection='3d')
-
-        # Plot the data
-        ax.plot_trisurf(x, y, z)
+        # TODO: fix: the method stopped working after the Point3D implementation. Currently commented.
+        # def plot_surf(self):
+        #     """
+        #     Method plotting the model as a 3D surface.
+        #     """
+        #     # Create the x, y, z numpy
+        #     x = [i[0] for i in self.scanned_data]
+        #     y = [i[1] for i in self.scanned_data]
+        #     z = [i[2] for i in self.scanned_data]
+        #
+        #     # Create a figure.
+        #     fig = plt.figure()
+        #     ax = fig.gca(projection='3d')
+        #
+        #     # Plot the data
+        #     ax.plot_trisurf(x, y, z)
 
 
 class FlatFace(Scan3D):
@@ -215,6 +243,7 @@ class FlatFace(Scan3D):
     """
 
     def __init__(self, scanned_data=None):
+        self.face2ref_dist = None
         self.ref_plane = None
 
         super().__init__(scanned_data)
@@ -242,8 +271,15 @@ class FlatFace(Scan3D):
         self.ref_plane.offset_plane(offset)
 
         if offset_points:
-            point_list = [p + self.ref_plane.plane_coeff[:3] * offset for p in self.scanned_data]
+            point_list = [ag.Point3D(p.coords + self.ref_plane.plane_coeff[:3] * offset) for p in self.scanned_data]
             self.scanned_data = np.array(point_list)
+
+    def calc_face2ref_dist(self):
+        """Calculates distances from facet points to the reference plane."""
+        if self.ref_plane:
+            self.face2ref_dist = []
+            for x in self.scanned_data:
+                self.face2ref_dist.append(x.distance_to_plane(self.ref_plane))
 
     def plot_face(self, fig=None, reduced=None):
         """
@@ -320,71 +356,33 @@ class RoundedEdge(Scan3D):
     A scanned rounded edge.
 
     """
+
     def __init__(self, scanned_data=None):
-        self.ref_line = None
+        self.facet_intrsct_line = None
         self.edge_points = None
         self.circles = None
+        self.edge2ref_dist = None
+        self.ref_line = None
 
         super().__init__(scanned_data)
 
-    def intersect_data(self, other):
-        """
-        Intersect scanned points with a surface between the reference line and a given line.
-
-        This function is used to find points on the scanned rounded corner. Circles are fitted on the
-        scanned points on different positions. Then the circles are intersected with the line passing through the
-        reference line of the edge and another given line (e.g. the centre of the column). A list of points is
-        generated which represent the real edge of rounded corner.
-
-        :param other:
-        :return:
-        """
-        if isinstance(other, ag.Line3D):
-            self.edge_points = []
-            # Loop through the circles that represent the edge roundness at different heights.
-            for circle in self.circles:
-                # Get the z-coordinate (height) of the current point
-                z_current = circle.points[0][0]
-
-                # Get the x-y coordinates of the edge reference line and the mid-line for the given height, z.
-                ref_line_point = self.ref_line.xy_for_z(z_current)
-                other_line_point = other.xy_for_z(z_current)
-
-                # Create a temporary line object from the two points.
-                intersection_line = ag.Line2D.from_2_points(ref_line_point[:2], other_line_point[:2])
-
-                # Intersect this temporary with the current circle.
-                line_circle_intersection = circle.intersect_with_line(intersection_line)
-
-                # If the line does not intersect with the current circle, print on screen and continue.
-                if line_circle_intersection is None:
-                    print("Line and circle at height {} do not intersect. Point ignored.".format(z_current))
-                    return
-
-                # If the line intersects with the circle, select the outermost of the two intersection points
-
-                if np.linalg.norm(line_circle_intersection[0]) > np.linalg.norm(line_circle_intersection[1]):
-                    outer = line_circle_intersection[0]
-                else:
-                    outer = line_circle_intersection[1]
-                self.edge_points.append(outer)
-        else:
-            NotImplemented
-
-    def add_ref_line(self, ref_line):
+    def add_facet_intrsct_line(self, line):
         """
         Add a reference line for the edge.
 
         Useful when the rounded edge lies between flat faces and the theoretical edge is at their intersection.
 
-        :param ref_line:
-        :return:
+        Parameters
+        ----------
+        line : Line3D
+            Theoretical edge line to be added. This line should be calculated as the intersection of the facets sharing
+            this edge.
         """
-        if isinstance(ref_line, ag.Line3D):
-            self.ref_line = ref_line
+        if isinstance(line, ag.Line3D):
+            self.facet_intrsct_line = line
         else:
             print("ref_line must be Line3D")
-            NotImplemented
+            return NotImplemented
 
     def fit_circles(self, axis=None, offset=None):
         """
@@ -406,6 +404,72 @@ class RoundedEdge(Scan3D):
         for x in self.grouped_data:
             self.circles.append(ag.Circle2D.from_fitting(x))
             self.circles[-1].radius = self.circles[-1].radius + offset
+
+    # TODO: Docstrings parameters...
+    def calc_edge_points(self, other):
+        """
+        Intersect scanned points with a surface between the reference line and a given line.
+
+        This function is used to find points on the scanned rounded corner. Circles are fitted on the
+        scanned points on different positions. Then the circles are intersected with the line passing through the
+        reference line of the edge and another given line (e.g. the centre of the column). A list of points is
+        generated which represent the real edge of rounded corner.
+
+        :param other:
+        :return:
+        """
+        if isinstance(other, ag.Line3D):
+            self.edge_points = []
+            # Loop through the circles that represent the edge roundness at different heights.
+            for circle in self.circles:
+                # Get the z-coordinate (height) of the current point
+                z_current = circle.points[0].coords[2]
+
+                # Get the x-y coordinates of the edge reference line and the mid-line for the given height, z.
+                ref_line_point = self.facet_intrsct_line.xy_for_z(z_current)
+                other_line_point = other.xy_for_z(z_current)
+
+                # Create a temporary line object from the two points.
+                intersection_line = ag.Line2D.from_2_points(ref_line_point[:2], other_line_point[:2])
+
+                # Intersect this temporary line with the current circle.
+                line_circle_intersection = circle.intersect_with_line(intersection_line)
+
+                # If the line does not intersect with the current circle, print on screen and continue.
+                if line_circle_intersection is None:
+                    print("Line and circle at height {} do not intersect. Point ignored.".format(z_current))
+                    return
+
+                # If the line intersects with the circle, select the outermost of the two intersection points.
+                if np.linalg.norm(line_circle_intersection[0]) > np.linalg.norm(line_circle_intersection[1]):
+                    outer = line_circle_intersection[0]
+                else:
+                    outer = line_circle_intersection[1]
+
+                # Append the point to the list of edge_points
+                self.edge_points.append(ag.Point3D(np.append(outer, z_current)))
+        else:
+            return NotImplemented
+
+    def calc_ref_line(self):
+        """
+        Calculate the reference line.
+
+        The reference line for the edge is defined as the best fit straight line to the edge points. For more
+        information on the edge points, see the `intersect_data` method.
+        """
+        self.ref_line = ag.Line3D.from_fitting(self.edge_points)
+
+    def calc_edge2ref_dist(self):
+        """Calculate distances of edge points to the reference line."""
+        if self.ref_line:
+            self.edge2ref_dist = []
+            for x in self.edge_points:
+                self.edge2ref_dist.append(x.distance_to_line(self.facet_intrsct_line))
+
+        else:
+            print('No reference line. First, add a reference line to the object.')
+            return NotImplemented
 
 
 def main():
