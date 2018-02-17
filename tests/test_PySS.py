@@ -1,20 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Tests for `steel_toolbox` package."""
+"""Tests for `PySS` package."""
 
 import unittest
 
-import steel_toolbox.polygonal as pg
-import steel_toolbox.analytic_geometry as ag
+import PySS.polygonal as pg
+import PySS.analytic_geometry as ag
 
 from click.testing import CliRunner
 
-from steel_toolbox import cli
+from PySS import cli
 
 
-class TestSteelToolbox(unittest.TestCase):
-    """Tests for `steel_toolbox` package."""
+class TestPySS(unittest.TestCase):
+    """Tests for `PySS` package."""
 
     def setUp(self):
         """Set up test fixtures, if any."""
@@ -111,7 +111,7 @@ class TestSteelToolbox(unittest.TestCase):
         fab_class = 'fcA'
 
         case.add_theoretical_specimen(n_sides, length, f_yield, fab_class, p_class=p_class, thickness=thickness)
-        case.add_real_specimen('tests/test_data/')
+        case.add_real_specimen('test_data/')
 
         # Perform checks
         self.assertEqual(case.real_specimen.thickness, 3.)
@@ -134,7 +134,7 @@ class TestSteelToolbox(unittest.TestCase):
         runner = CliRunner()
         result = runner.invoke(cli.main)
         assert result.exit_code == 0
-        assert 'steel_toolbox.cli.main' in result.output
+        assert 'PySS.cli.main' in result.output
         help_result = runner.invoke(cli.main, ['--help'])
         assert help_result.exit_code == 0
         assert '--help  Show this message and exit.' in help_result.output
