@@ -2,6 +2,14 @@
 History
 =======
 
+0.5.0 (2017-02-17)
+------------------
+
+* Packaged migrated from steel_toolbox to `PySS`
+* Package enriched with:
+    Geometrical objects and methods on module `analytic_geometry`
+    Higher level functionality added (importing-exporting, post-processing, reporting methods) in the `polygonal` module
+
 0.4.0 (2017-10-06)
 ------------------
 

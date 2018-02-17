@@ -1,28 +1,28 @@
-=============
-steel_toolbox
-=============
+=========================================
+PySS: Python package for Structural Steel
+=========================================
 
 
-.. image:: https://img.shields.io/pypi/v/steeltoolbox.svg
-        :target: https://pypi.python.org/pypi/steeltoolbox
+.. image:: https://img.shields.io/pypi/v/PySS.svg
+        :target: https://pypi.python.org/pypi/PySS
 
-.. image:: https://img.shields.io/travis/manpan-1/steel_toolbox.svg
-        :target: https://travis-ci.org/manpan-1/steel_toolbox
+.. image:: https://img.shields.io/travis/manpan-1/PySS.svg
+        :target: https://travis-ci.org/manpan-1/PySS
 
-.. image:: https://readthedocs.org/projects/steel-toolbox/badge/?version=latest
-        :target: https://steel-toolbox.readthedocs.io/en/latest/?badge=latest
+.. image:: https://readthedocs.org/projects/PySS/badge/?version=latest
+        :target: https://PySS.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
-.. image:: https://pyup.io/repos/github/manpan-1/steel_toolbox/shield.svg
-     :target: https://pyup.io/repos/github/manpan-1/steel_toolbox/
+.. image:: https://pyup.io/repos/github/manpan-1/PySS/shield.svg
+     :target: https://pyup.io/repos/github/manpan-1/PySS/
      :alt: Updates
 
 
-A collection of classes and tools used on structural steel design.
+A collection of classes and tools useful to design and perform research on steel structures.
 
 
 * Free software: MIT license
-* Documentation: https://steel-toolbox.readthedocs.io.
+* Documentation: https://PySS.readthedocs.io.
 
 
 Features

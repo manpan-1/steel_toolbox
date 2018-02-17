@@ -1,5 +1,5 @@
-Welcome to steeltoolbox's documentation!
-========================================
+Welcome to PySS documentation!
+==============================
 
 Contents:
 

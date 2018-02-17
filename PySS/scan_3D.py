@@ -7,7 +7,7 @@ Module containing methods related to 3D scanning.
 import numpy as np
 from stl import mesh
 import os
-from steel_toolbox import analytic_geometry as ag
+from PySS import analytic_geometry as ag
 import pickle
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D

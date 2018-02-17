@@ -4,7 +4,7 @@ Documentation from Docstrings
 This documentation is automatically generated from the docstrings using the 'autodoc' extension for Sphinx. The
 numpydoc formatting is followed.
 
-.. automodule:: steel_toolbox
+.. automodule:: PySS
 
 polygonal.py module: Framework for the study on polygonal profiles
 ==================================================================

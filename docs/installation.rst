@@ -8,13 +8,13 @@ Installation
 Stable release
 --------------
 
-To install steeltoolbox, run this command in your terminal:
+To install PySS, run this command in your terminal:
 
 .. code-block:: console
 
-    $ pip install steeltoolbox
+    $ pip install PySS
 
-This is the preferred method to install steeltoolbox, as it will always install the most recent stable release.
+This is the preferred method to install PySS, as it will always install the most recent stable release.
 
 If you don't have `pip`_ installed, this `Python installation guide`_ can guide
 you through the process.
@@ -26,19 +26,19 @@ you through the process.
 From sources
 ------------
 
-The sources for steeltoolbox can be downloaded from the `Github repo`_.
+The sources for PySS can be downloaded from the `Github repo`_.
 
 You can either clone the public repository:
 
 .. code-block:: console
 
-    $ git clone git://github.com/manpan-1/steel_toolbox
+    $ git clone git://github.com/manpan-1/PySS
 
 Or download the `tarball`_:
 
 .. code-block:: console
 
-    $ curl  -OL https://github.com/manpan-1/steel_toolbox/tarball/master
+    $ curl  -OL https://github.com/manpan-1/PySS/tarball/master
 
 Once you have a copy of the source, you can install it with:
 
@@ -47,5 +47,5 @@ Once you have a copy of the source, you can install it with:
     $ python setup.py install
 
 
-.. _Github repo: https://github.com/manpan-1/steel_toolbox
-.. _tarball: https://github.com/manpan-1/steel_toolbox/tarball/master
+.. _Github repo: https://github.com/manpan-1/PySS
+.. _tarball: https://github.com/manpan-1/PySS/tarball/master

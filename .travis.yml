@@ -3,7 +3,7 @@ condition: $TOXENV == py27
 deploy:
   provider: pypi
   true:
-    repo: manpan-1/steel_toolbox
+    repo: manpan-1/PySS
     tags: true
   distributions: sdist
   user: manpan-1

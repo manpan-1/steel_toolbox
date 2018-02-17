@@ -1,2 +1,2 @@
-import steel_toolbox
-steel_toolbox.polygonal.main(make_plots=False, export=False)
+import PySS
+PySS.polygonal.main(make_plots=False, export=False)

@@ -6,10 +6,10 @@ A framework for the study of polygonal profiles.
 """
 import os
 import numpy as np
-import steel_toolbox.steel_design as sd
-import steel_toolbox.lab_tests as lt
-import steel_toolbox.analytic_geometry as ag
-import steel_toolbox.scan_3D as s3d
+import PySS.steel_design as sd
+import PySS.lab_tests as lt
+import PySS.analytic_geometry as ag
+import PySS.scan_3D as s3d
 import pickle
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D

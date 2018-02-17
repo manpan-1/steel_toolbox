@@ -2,6 +2,6 @@
 Usage
 =====
 
-To use steeltoolbox in a project::
+To use PySS in a project::
 
-    import steel_toolbox
+    import PySS

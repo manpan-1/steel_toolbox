@@ -24,24 +24,25 @@ test_requirements = [
 ]
 
 setup(
-    name='steeltoolbox',
-    version='0.4.0',
-    description="A collection of classes and tools used on structural steel research and design.",
+    name='PySS',
+    version='0.5.0',
+    description="Python package for Steel Structures."
+                "A collection of classes and tools used on structural steel research and design.",
     long_description=readme + '\n\n' + history,
     author="Panagiotis Manoleas",
     author_email='manpan@ltu.se',
-    url='https://github.com/manpan-1/steel_toolbox',
-    packages=find_packages(include=['steel_toolbox']),
+    url='https://github.com/manpan-1/PySS',
+    packages=find_packages(include=['PySS']),
     entry_points={
         'console_scripts': [
-            'steel_toolbox=steel_toolbox.cli:main'
+            'PySS=PySS.cli:main'
         ]
     },
     include_package_data=True,
     install_requires=requirements,
     license="MIT license",
     zip_safe=False,
-    keywords='steel_toolbox',
+    keywords='PySS',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Science/Research',
