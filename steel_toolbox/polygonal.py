@@ -125,12 +125,12 @@ class PolygonalColumn:
 
         # Add a center line for the specimen.
         # TODO: add real centreline from file.
-        specimen.add_centre_line([0, 0, 0], [0, 0, 1])
+        print('Adding centre-line from pickle.')
+        specimen.centre_line_from_pickle('./' + path + 'centreline.pkl')
 
         # Add all sides and edges.
         # they consist of FlatFace and RoundedEdge instances.
         specimen.add_all_sides(n_sides, path + 'side_', fit_planes=True, offset_to_midline=True)
-
         # Check if the existing edges found in the directory correspond one by one to the sides. If so, then the
         # intersection lines of adjacent sides are calculated and added to the edges as reference lines. Otherwise, the
         # edges are imported from whatever files are found and no reference lines are calculated.
@@ -140,7 +140,6 @@ class PolygonalColumn:
             intrsct_lines = False
 
         specimen.add_all_edges(n_edges, path + 'edge_', intrsct_lines=intrsct_lines)
-
         # Find a series of points for each edge based on the scanned surface.
         specimen.find_real_edges(offset_to_midline=True, ref_lines=True)
 
@@ -435,13 +434,20 @@ class RealSpecimen:
         self.centre_line = centre_line
         self.thickness = thickness
 
-    def add_centre_line(self, point1, point2):
+    def centre_line_from_pickle(self, fh):
         """
-        Calculate the centre axis of the column from 2 given points.
+        Import a centre-line to the polygonal object from a pickle file.
 
-        :return:
+        The pickle file is expected to contain a list of 2 points from which the line is constructed. This method is
+        used in combination with the equivalent `export` method from blender.
+
+        Parameters
+        ----------
+        fh : str
+            Path and filename of the pickle file.
+
         """
-        self.centre_line = ag.Line3D.from_2_points(point1, point2)
+        self.centre_line = ag.Line3D.from_pickle(fh)
 
     def add_single_side_from_pickle(self, filename):
         """
@@ -478,18 +484,18 @@ class RealSpecimen:
 
         self.sides = []
         for x in range(1, n_sides + 1):
-            print('Adding scanned data for facet number{}'.format(x))
+            print('Adding scanned data, facet:   {}'.format(x))
             self.sides.append(s3d.FlatFace.from_pickle(prefix + '{:02d}.pkl'.format(x)))
 
         if fit_planes:
             for i, x in enumerate(self.sides):
-                print('Fitting a reference plane for facet number {}'.format(i))
+                print('Fitting a reference plane, facet:    {}'.format(i + 1))
                 x.fit_plane()
 
         if offset_to_midline:
             offset = self.thickness / 2
             for i, x in enumerate(self.sides):
-                print('Offseting plane and points of facet number {}'.format(i))
+                print('Offsetting plane and points, facet:    {}'.format(i + 1))
                 x.offset_face(offset, offset_points=True)
 
     def add_single_edge_from_pickle(self, filename):
@@ -525,10 +531,14 @@ class RealSpecimen:
             Assign intersection lines to the edges from the intersection of adjacent facets.
 
         """
-        self.edges = [s3d.RoundedEdge.from_pickle(prefix + '{:02d}.pkl'.format(x)) for x in range(1, n_sides + 1)]
+        self.edges = []
+        for x in range(1, n_sides + 1):
+            print('Adding scanned data, edge:    {}'.format(x))
+            self.edges.append(s3d.RoundedEdge.from_pickle(prefix + '{:02d}.pkl'.format(x)))
 
         if intrsct_lines:
             for x in range(-len(self.sides), 0):
+                print('Adding theoretical edge, edge:    {}'.format(x + n_sides + 1))
                 self.edges[x].theoretical_edge = (self.sides[x].ref_plane & self.sides[x + 1].ref_plane)
 
     def find_real_edges(self, offset_to_midline=False, ref_lines=False):
@@ -555,7 +565,7 @@ class RealSpecimen:
 
         if isinstance(self.centre_line, ag.Line3D) and isinstance(self.edges, list):
             for i, x in enumerate(self.edges):
-                print('Calculating reference line for edge number {}'.format(i))
+                print('Fitting circles and calculating edge points, edge:    {}'.format(i + 1))
                 x.fit_circles(axis=2, offset=offset)
                 x.calc_edge_points(self.centre_line)
         else:
@@ -564,19 +574,20 @@ class RealSpecimen:
             return NotImplemented
 
         if ref_lines:
-            for x in self.edges:
+            for i, x in enumerate(self.edges):
+                print('Calculating reference line by fitting on the edge points, edge:    {}'.format(i + 1))
                 x.calc_ref_line()
 
     def find_edge_imperfection_displacements(self):
         """Calculate distances of edge points to each reference line."""
         for i, x in enumerate(self.edges):
-            print('Calculating initial imperfection displacements for edge number {}.'.format(i))
+            print('Calculating initial imperfection displacements, edge:    {}.'.format(i + 1))
             x.calc_edge2ref_dist()
 
     def find_facet_imperfection_displacements(self):
         """Calculate distances of edge points to each reference line."""
         for i, x in enumerate(self.sides):
-            print('Calculating initial imperfection displacements for facet number {}.'.format(i))
+            print('Calculating initial imperfection displacements, facet:    {}'.format(i + 1))
             x.calc_face2ref_dist()
 
     def plot_all(self):
