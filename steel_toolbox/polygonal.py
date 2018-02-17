@@ -21,8 +21,8 @@ class PolygonalColumn:
 
     """
 
-    def __init__(self, theoretical_specimen=None, real_specimen=None, experiment_data=None):
-
+    def __init__(self, name=None, theoretical_specimen=None, real_specimen=None, experiment_data=None):
+        self.name = name
         self.theoretical_specimen = theoretical_specimen
         self.real_specimen = real_specimen
         self.experiment_data = experiment_data
@@ -157,6 +157,11 @@ class PolygonalColumn:
         self.experiment_data.specimen_length = self.theoretical_specimen.geometry.length
         self.experiment_data.cs_area = self.theoretical_specimen.cs_props.area
         self.experiment_data.process_data()
+
+    def report_real_specimen(self):
+        """Print a report for the processed scanned data of the real specimen."""
+        print('Report for {}'.format(self.name))
+        self.real_specimen.print_report()
 
 
 class TheoreticalSpecimen(sd.Part):
@@ -582,7 +587,15 @@ class RealSpecimen:
         """Calculate distances of edge points to each reference line."""
         for i, x in enumerate(self.edges):
             print('Calculating initial imperfection displacements, edge:    {}.'.format(i + 1))
-            x.calc_edge2ref_dist()
+            if x.ref_line:
+                if x.ref_line is NotImplemented:
+                    print('The reference line is type `NotImplemented`, fitting possibly did not converge.')
+                    x.edge2ref_dist = NotImplemented
+                else:
+                    x.calc_edge2ref_dist()
+            else:
+                print('No reference line. Edge imperfection not calculated.')
+                x.edge2ref_dist = NotImplemented
 
     def find_facet_imperfection_displacements(self):
         """Calculate distances of edge points to each reference line."""
@@ -609,22 +622,35 @@ class RealSpecimen:
         """
         Print a report for the polygon column.
 
-        :return:
         """
-        max_z = max([x.scanned_data[:, 2].max() for x in self.sides])
-        min_z = min([x.scanned_data[:, 2].min() for x in self.sides])
-        for i in range(len(self.sides)):
-            print('Side {} is : {}'.format(i + 1, self.sides[i].ref_plane.plane_coeff))
-            print('')
-            print('Edge {} (sides {}-{})\n    Direction : {}\n    Through points : \n{}\n{}'.format(
-                i + 1,
-                i + 1,
-                i + 2,
-                self.edges[i].facet_intrsct_line.parallel,
-                self.edges[i].facet_intrsct_line.xy_for_z(min_z),
-                self.edges[i].facet_intrsct_line.xy_for_z(max_z))
-            )
-            print('')
+        for i, x in enumerate(self.sides):
+            if x.face2ref_dist is NotImplemented:
+                print('No initial displacement data, facet: {}'.format(i + 1))
+            else:
+                print('Max init displacement from ref plane, facet: {}'.format(i + 1), max(np.abs(x.face2ref_dist)))
+
+        for i, x in enumerate(self.edges):
+            if x.edge2ref_dist is NotImplemented:
+                print('No initial displacement data, edge: {}'.format(i + 1))
+            else:
+                print('Max init displacement from ref line, edge: {}'.format(i + 1),
+                      max(np.abs(x.edge2ref_dist)))
+
+        # TODO: Fix the following code and add more to the report.
+        # max_z = max([x.scanned_data[:, 2].max() for x in self.sides])
+        # min_z = min([x.scanned_data[:, 2].min() for x in self.sides])
+        # for i in range(len(self.sides)):
+        #     print('Side {} is : {}'.format(i + 1, self.sides[i].ref_plane.plane_coeff))
+        #     print('')
+        #     print('Edge {} (sides {}-{})\n    Direction : {}\n    Through points : \n{}\n{}'.format(
+        #         i + 1,
+        #         i + 1,
+        #         i + 2,
+        #         self.edges[i].facet_intrsct_line.parallel,
+        #         self.edges[i].facet_intrsct_line.xy_for_z(min_z),
+        #         self.edges[i].facet_intrsct_line.xy_for_z(max_z))
+        #     )
+        #     print('')
 
 
 class TestData(lt.Experiment):
@@ -942,14 +968,24 @@ def semi_closed_polygon(n_sides, radius, t, tg, rbend, nbend, l_lip):
     return [x_cs, y_cs, x_sector, y_sector]
 
 
-def main(add_real_specimens=True, add_experimental_data=True, make_plots=True, export='./data/polygonal.pkl'):
+def main(
+         add_real_specimens=True,
+         add_experimental_data=True,
+         make_plots=True,
+         export=False,
+         print_reports=True
+         ):
+
+    if export is True:
+        export='./data/polygonal.pkl'
+
     # Create a polygonal column object.
     length = 700.
     f_yield = 700.
     fab_class = 'fcA'
 
     print('Creating the polygonal column objects.')
-    cases = [PolygonalColumn() for i in range(9)]
+    cases = [PolygonalColumn(name='specimen{}'.format(i + 1)) for i in range(9)]
 
     print('Adding theoretical specimens with calculations to the polygonal columns')
     cases[0].add_theoretical_specimen(16, length, f_yield, fab_class, thickness=3., p_class=30.)
@@ -995,6 +1031,11 @@ def main(add_real_specimens=True, add_experimental_data=True, make_plots=True, e
         cases[8].experiment_data.plot_strain_stress(ax=ax)
 
         # Displacement-load
+
+    if print_reports:
+        for i in cases:
+            print('')
+            i.report_real_specimen()
 
     if export:
         print('Exporting the generated object with all the processed specimens to pickle.')
